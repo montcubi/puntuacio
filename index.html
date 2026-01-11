@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Puntuació 2n ESO + IA</title>
+    <title>Sistema de Puntuació Multi-Classe + IA</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -48,6 +48,15 @@
         .projection-card:hover {
             transform: scale(1.02);
         }
+
+        /* Toggle Switch for Attendance */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #ef4444; /* Red-500 */
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #ef4444; /* Red-500 */
+        }
     </style>
 </head>
 <body class="text-gray-800 min-h-screen flex flex-col">
@@ -55,36 +64,54 @@
     <!-- Header (Teacher Mode) -->
     <header id="teacher-header" class="bg-indigo-600 text-white shadow-lg sticky top-0 z-50 transition-transform duration-300">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-2">
-            <div class="flex items-center gap-3">
-                <i class="fa-solid fa-graduation-cap text-2xl"></i>
-                <div>
-                    <h1 class="text-xl font-bold leading-tight">Avaluació 2n ESO</h1>
-                    <p class="text-xs text-indigo-200" id="current-date">Trimestre Actual</p>
+            <!-- Class Selector Area -->
+            <div class="flex items-center gap-3 bg-indigo-700/50 p-1 pr-3 rounded-lg border border-indigo-500/30">
+                <div class="p-2 bg-indigo-800 rounded-md">
+                    <i class="fa-solid fa-users-rectangle text-xl"></i>
                 </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <select id="classSelector" onchange="app.switchClass(this.value)" class="bg-transparent font-bold text-lg focus:outline-none cursor-pointer text-white appearance-none pr-6 relative z-10">
+                            <!-- Options filled by JS -->
+                        </select>
+                        <i class="fa-solid fa-chevron-down text-xs absolute ml-[85%] pointer-events-none text-indigo-200"></i>
+                    </div>
+                    <p class="text-xs text-indigo-200" id="current-date">Carregant...</p>
+                </div>
+                <button onclick="app.openClassModal()" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-indigo-500 text-indigo-200 hover:text-white transition" title="Gestionar Classes">
+                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                </button>
             </div>
-            <div class="flex gap-2 items-center">
+
+            <!-- Toolbar -->
+            <div class="flex gap-2 items-center overflow-x-auto pb-1 sm:pb-0">
+                 <!-- Help Button -->
+                 <button onclick="app.openHelpModal()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2 border border-indigo-400 whitespace-nowrap" title="Guia i Instruccions">
+                    <i class="fa-solid fa-circle-question"></i> <span class="hidden xl:inline">Ajuda</span>
+                </button>
                  <!-- ID Manager Button -->
-                 <button onclick="app.openIdManager()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2 border border-indigo-400" title="Veure i gestionar llista d'IDs">
-                    <i class="fa-solid fa-id-badge"></i> <span class="hidden sm:inline">Gestió IDs</span>
+                 <button onclick="app.openIdManager()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2 border border-indigo-400 whitespace-nowrap" title="Veure i gestionar llista d'IDs">
+                    <i class="fa-solid fa-id-badge"></i> <span class="hidden xl:inline">IDs</span>
                 </button>
                  <!-- Projection Mode Button -->
-                 <button onclick="app.toggleProjectionMode()" class="bg-white text-indigo-700 hover:bg-gray-100 font-bold px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2 border border-transparent shadow-sm" title="Projectar resultats anònims">
+                 <button onclick="app.toggleProjectionMode()" class="bg-white text-indigo-700 hover:bg-gray-100 font-bold px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2 border border-transparent shadow-sm whitespace-nowrap" title="Projectar resultats anònims">
                     <i class="fa-solid fa-desktop"></i> Projectar
                 </button>
                 <div class="h-6 w-px bg-indigo-400 mx-1"></div>
+                 <!-- Category Manager Button -->
+                 <button onclick="app.openCategoryModal()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2 border border-indigo-500 whitespace-nowrap" title="Gestionar Ítems puntuables">
+                    <i class="fa-solid fa-list-check"></i> <span class="hidden sm:inline">Ítems</span>
+                </button>
                  <!-- Settings Button -->
-                 <button onclick="app.openSettingsModal()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2" title="Configuració de barems">
+                 <button onclick="app.openSettingsModal()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2 whitespace-nowrap" title="Configuració de barems i Còpies de Seguretat">
                     <i class="fa-solid fa-gear"></i>
                 </button>
                  <!-- AI Class Analysis Button -->
-                 <button onclick="app.generateClassAnalysis()" class="ai-gradient text-white px-3 py-1.5 rounded-md text-sm transition hover:shadow-lg flex items-center gap-2 border border-white/20">
+                 <button onclick="app.generateClassAnalysis()" class="ai-gradient text-white px-3 py-1.5 rounded-md text-sm transition hover:shadow-lg flex items-center gap-2 border border-white/20 whitespace-nowrap">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Anàlisi</span>
                 </button>
-                <button onclick="app.exportToCSV()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2">
-                    <i class="fa-solid fa-file-csv"></i> <span class="hidden sm:inline">Exportar</span>
-                </button>
-                <button onclick="app.resetData()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2">
-                    <i class="fa-solid fa-trash"></i>
+                <button onclick="app.exportToCSV()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-md text-sm transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-file-csv"></i> <span class="hidden xl:inline">CSV</span>
                 </button>
             </div>
         </div>
@@ -96,7 +123,7 @@
             <div class="flex items-center gap-4">
                 <i class="fa-solid fa-chart-simple text-3xl text-indigo-400"></i>
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight">Resultats del Trimestre</h1>
+                    <h1 class="text-2xl font-bold tracking-tight" id="proj-class-title">Resultats</h1>
                     <p class="text-sm text-gray-400">Busca el teu ID a la llista</p>
                 </div>
             </div>
@@ -142,22 +169,22 @@
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-sm">
                     <div class="p-3 rounded-lg bg-red-50 border border-red-100">
                         <div class="font-bold text-red-700 text-lg">NA</div>
-                        <div class="text-red-600 text-xs">No Assolit</div>
+                        <div class="text-red-600 text-xs font-bold uppercase tracking-wide">Novell</div>
                         <div class="text-gray-400 text-xs mt-1" id="range-na">&lt; 20 punts</div>
                     </div>
                     <div class="p-3 rounded-lg bg-orange-50 border border-orange-100">
                         <div class="font-bold text-orange-700 text-lg">AS</div>
-                        <div class="text-orange-600 text-xs">Satisfactori</div>
+                        <div class="text-orange-600 text-xs font-bold uppercase tracking-wide">Aprenent</div>
                         <div class="text-gray-400 text-xs mt-1" id="range-as">20 - 39 punts</div>
                     </div>
                     <div class="p-3 rounded-lg bg-blue-50 border border-blue-100">
                         <div class="font-bold text-blue-700 text-lg">AN</div>
-                        <div class="text-blue-600 text-xs">Notable</div>
+                        <div class="text-blue-600 text-xs font-bold uppercase tracking-wide">Expert</div>
                         <div class="text-gray-400 text-xs mt-1" id="range-an">40 - 59 punts</div>
                     </div>
                     <div class="p-3 rounded-lg bg-green-50 border border-green-100">
                         <div class="font-bold text-green-700 text-lg">AE</div>
-                        <div class="text-green-600 text-xs">Excel·lent</div>
+                        <div class="text-green-600 text-xs font-bold uppercase tracking-wide">Mestre</div>
                         <div class="text-gray-400 text-xs mt-1" id="range-ae">60+ punts</div>
                     </div>
                 </div>
@@ -166,7 +193,7 @@
 
         <!-- Filters -->
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-gray-800">Llistat de la classe</h2>
+            <h2 class="text-xl font-bold text-gray-800" id="list-title">Llistat de la classe</h2>
             <div class="relative">
                 <input type="text" id="searchInput" onkeyup="app.filterStudents()" placeholder="Cercar alumne..." 
                     class="pl-9 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-48 md:w-64">
@@ -182,8 +209,8 @@
         <!-- Empty State -->
         <div id="empty-state" class="hidden text-center py-12">
             <div class="text-gray-300 mb-4 text-6xl"><i class="fa-solid fa-users-slash"></i></div>
-            <h3 class="text-xl font-medium text-gray-600">No hi ha alumnes encara</h3>
-            <p class="text-gray-400">Comença afegint els teus alumnes de 2n d'ESO.</p>
+            <h3 class="text-xl font-medium text-gray-600">No hi ha alumnes en aquest grup</h3>
+            <p class="text-gray-400">Comença afegint alumnes o importa un llistat.</p>
         </div>
     </main>
 
@@ -207,7 +234,7 @@
     <!-- Footer (Teacher Mode Only) -->
     <footer id="teacher-footer" class="bg-white border-t border-gray-200 mt-auto py-4">
         <div class="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-            <p>Eina de gestió d'aula · 2n ESO · Amb tecnologia Gemini AI ✨</p>
+            <p>Eina de gestió d'aula Multi-Grup · Amb tecnologia Gemini AI ✨</p>
         </div>
     </footer>
 
@@ -260,7 +287,7 @@
         <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full transform transition-all scale-95 opacity-0" id="import-modal-content">
             <div class="p-6">
                 <h3 class="text-xl font-bold mb-2 text-gray-800">Importar Llistat d'Alumnes</h3>
-                <p class="text-sm text-gray-500 mb-4">Enganxa la llista d'alumnes aquí (un nom per línia). Pots copiar-los directament des d'Excel.</p>
+                <p class="text-sm text-gray-500 mb-4">Enganxa la llista d'alumnes aquí (un nom per línia) per afegir-los a <strong><span id="import-class-name"></span></strong>.</p>
                 
                 <textarea id="importTextarea" class="w-full h-48 border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none mb-4" placeholder="Alumne 1&#10;Alumne 2&#10;Alumne 3..."></textarea>
                 
@@ -270,6 +297,37 @@
                     </button>
                     <button onclick="app.processBulkImport()" class="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition text-sm font-medium">
                         Importar Alumnes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Manager Modal -->
+    <div id="class-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" id="class-modal-content">
+            <div class="p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-users-rectangle text-indigo-500"></i> Gestió de Classes
+                </h3>
+                
+                <!-- Create Class Form -->
+                <form onsubmit="app.createClass(event)" class="flex gap-2 mb-6">
+                    <input type="text" id="newClassName" placeholder="Nom nova classe..." required 
+                        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm">
+                    <button type="submit" class="bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition text-sm">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </form>
+
+                <h4 class="text-xs font-bold text-gray-500 uppercase mb-2">Classes Existents</h4>
+                <div id="class-list-container" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    <!-- JS fills this -->
+                </div>
+                
+                <div class="mt-6 flex justify-end gap-2">
+                    <button onclick="app.closeClassModal()" class="px-4 py-2 bg-gray-800 text-white hover:bg-gray-900 rounded-lg transition text-sm font-medium">
+                        Tancar
                     </button>
                 </div>
             </div>
@@ -330,44 +388,148 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
+    <!-- Category Manager Modal -->
+    <div id="category-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full transform transition-all scale-95 opacity-0 flex flex-col max-h-[85vh]" id="category-modal-content">
+            <div class="p-6 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-list-check text-indigo-500 mr-2"></i>Gestió d'Ítems Puntuables</h3>
+                    <p class="text-sm text-gray-500">Afegeix, edita o elimina els botons de puntuació. <strong>Aquests canvis afecten a TOTS els grups.</strong></p>
+                </div>
+                <button onclick="app.closeCategoryModal()" class="text-gray-400 hover:text-gray-600 transition">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-grow grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Left: List of current categories -->
+                <div>
+                    <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase">Ítems Actuals</h4>
+                    <div id="category-list" class="space-y-2">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Right: Edit/Create Form -->
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 h-fit">
+                    <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase" id="cat-form-title">Afegir Nou Ítem</h4>
+                    <form onsubmit="app.saveCategory(event)" id="category-form" class="space-y-3">
+                        <input type="hidden" id="cat-id">
+                        
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Nom de l'ítem</label>
+                            <input type="text" id="cat-label" required placeholder="Ex: Deures, Participació..." 
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">Punts</label>
+                                <input type="number" id="cat-points" required placeholder="Ex: 2, -1..." 
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <p class="text-[10px] text-gray-400 mt-1">Utilitza negatius per restar.</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">Color</label>
+                                <select id="cat-color" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option value="blue">Blau</option>
+                                    <option value="purple">Lila</option>
+                                    <option value="green">Verd</option>
+                                    <option value="yellow">Groc</option>
+                                    <option value="red">Vermell</option>
+                                    <option value="gray">Gris</option>
+                                    <option value="pink">Rosa</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Icona</label>
+                            <div class="grid grid-cols-5 gap-2" id="icon-selector">
+                                <!-- Generated via JS -->
+                            </div>
+                            <input type="hidden" id="cat-icon" required>
+                        </div>
+
+                        <div class="flex justify-end gap-2 mt-4 pt-2 border-t border-gray-200">
+                            <button type="button" onclick="app.resetCategoryForm()" class="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm">Cancel·lar</button>
+                            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium w-full md:w-auto">
+                                <i class="fa-solid fa-save mr-1"></i> Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal (Updated with Backup) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full transform transition-all scale-95 opacity-0" id="settings-modal-content">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full transform transition-all scale-95 opacity-0" id="settings-modal-content">
             <div class="p-6">
                 <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                    <i class="fa-solid fa-gear text-indigo-500"></i> Configuració Barems
+                    <i class="fa-solid fa-gear text-indigo-500"></i> Configuració
                 </h3>
                 
-                <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Left: Thresholds -->
                     <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Assoliment Satisfactori (AS)</label>
-                        <div class="flex items-center gap-2">
-                            <span class="text-gray-400 text-sm">Mínim:</span>
-                            <input type="number" id="setting-as" class="w-20 border border-gray-300 rounded px-2 py-1 text-center font-bold text-orange-600 focus:ring-2 focus:ring-orange-200 focus:outline-none">
-                            <span class="text-gray-400 text-sm">punts</span>
+                        <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase border-b pb-1">Barems Competencials</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Satisfactori (AS)</label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-400 text-sm">Mínim:</span>
+                                    <input type="number" id="setting-as" class="w-20 border border-gray-300 rounded px-2 py-1 text-center font-bold text-orange-600 focus:ring-2 focus:ring-orange-200 focus:outline-none">
+                                    <span class="text-gray-400 text-sm">pts</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Notable (AN)</label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-400 text-sm">Mínim:</span>
+                                    <input type="number" id="setting-an" class="w-20 border border-gray-300 rounded px-2 py-1 text-center font-bold text-blue-600 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                                    <span class="text-gray-400 text-sm">pts</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Excel·lent (AE)</label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-400 text-sm">Mínim:</span>
+                                    <input type="number" id="setting-ae" class="w-20 border border-gray-300 rounded px-2 py-1 text-center font-bold text-green-600 focus:ring-2 focus:ring-green-200 focus:outline-none">
+                                    <span class="text-gray-400 text-sm">pts</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
+                    <!-- Right: Backup -->
                     <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Assoliment Notable (AN)</label>
-                        <div class="flex items-center gap-2">
-                            <span class="text-gray-400 text-sm">Mínim:</span>
-                            <input type="number" id="setting-an" class="w-20 border border-gray-300 rounded px-2 py-1 text-center font-bold text-blue-600 focus:ring-2 focus:ring-blue-200 focus:outline-none">
-                            <span class="text-gray-400 text-sm">punts</span>
-                        </div>
-                    </div>
+                        <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase border-b pb-1">Seguretat i Dades</h4>
+                        <div class="space-y-4">
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                <p class="text-xs text-gray-500 mb-2">Descarrega una còpia completa de totes les classes i alumnes.</p>
+                                <button onclick="app.downloadBackup()" class="w-full bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-50 px-3 py-2 rounded text-sm font-medium transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-download"></i> Descarregar Còpia
+                                </button>
+                            </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Assoliment Excel·lent (AE)</label>
-                        <div class="flex items-center gap-2">
-                            <span class="text-gray-400 text-sm">Mínim:</span>
-                            <input type="number" id="setting-ae" class="w-20 border border-gray-300 rounded px-2 py-1 text-center font-bold text-green-600 focus:ring-2 focus:ring-green-200 focus:outline-none">
-                            <span class="text-gray-400 text-sm">punts</span>
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                <p class="text-xs text-gray-500 mb-2">Restaura dades des d'un fitxer de còpia (esborrarà les dades actuals).</p>
+                                <label class="w-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 px-3 py-2 rounded text-sm font-medium transition flex items-center justify-center gap-2 cursor-pointer">
+                                    <i class="fa-solid fa-upload"></i> Restaurar Còpia
+                                    <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="app.restoreBackup(this)">
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="mt-6 flex justify-end gap-2">
+                <div class="mt-6 flex justify-end gap-2 border-t pt-4">
                     <button onclick="app.closeSettingsModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition text-sm font-medium">
                         Cancel·lar
                     </button>
@@ -379,12 +541,142 @@
         </div>
     </div>
 
+    <!-- Help & Instructions Modal -->
+    <div id="help-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full transform transition-all scale-95 opacity-0 flex flex-col max-h-[85vh]" id="help-modal-content">
+            <div class="p-6 border-b border-gray-100 bg-indigo-600 text-white rounded-t-xl flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-bold"><i class="fa-solid fa-circle-question mr-2"></i>Guia de l'Aplicació</h3>
+                    <p class="text-sm text-indigo-100">Instruccions d'ús per al professorat</p>
+                </div>
+                <button onclick="app.closeHelpModal()" class="text-indigo-200 hover:text-white transition">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-grow bg-gray-50">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
+                    <!-- Section: Classes & Students -->
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h4 class="font-bold text-lg text-indigo-600 mb-3 border-b pb-2"><i class="fa-solid fa-users-rectangle mr-2"></i>Gestió de Grups i Alumnes</h4>
+                        <ul class="space-y-3 text-sm text-gray-600">
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Canviar de Classe:</strong> Utilitza el desplegable a dalt a l'esquerra per moure't entre grups (ex: 2n A, 2n B).
+                                </div>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Crear/Eliminar Classes:</strong> Fes clic a la icona del llapis <i class="fa-solid fa-pen-to-square text-indigo-400"></i> al costat del selector per gestionar els teus grups.
+                                </div>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Assistència Ràpida:</strong> Usa l'interruptor "Absent" a la targeta de l'alumne si falta a classe. Això bloqueja la puntuació per evitar errors.
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Section: Scoring & Gamification -->
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h4 class="font-bold text-lg text-indigo-600 mb-3 border-b pb-2"><i class="fa-solid fa-star mr-2"></i>Puntuació i Gamificació</h4>
+                        <ul class="space-y-3 text-sm text-gray-600">
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Avaluar:</strong> Fes clic als botons de colors per sumar/restar punts.
+                                </div>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Rangs (Gamificació):</strong> Els alumnes pugen de rang automàticament segons la nota (Novell, Aprenent, Expert, Mestre).
+                                </div>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Personalitzar Ítems:</strong> El botó "Ítems" et permet crear, editar o esborrar els botons de puntuació.
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Section: Projection & AI -->
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h4 class="font-bold text-lg text-indigo-600 mb-3 border-b pb-2"><i class="fa-solid fa-desktop mr-2"></i>Projecció i IA</h4>
+                        <ul class="space-y-3 text-sm text-gray-600">
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Mode Projecció:</strong> Mostra només IDs i puntuacions de forma anònima per la pissarra.
+                                </div>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Informes IA:</strong> Fes clic a la vareta màgica <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> a la targeta d'un alumne per generar un comentari automàtic.
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Section: Data & Backup -->
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h4 class="font-bold text-lg text-indigo-600 mb-3 border-b pb-2"><i class="fa-solid fa-database mr-2"></i>Seguretat de Dades</h4>
+                        <ul class="space-y-3 text-sm text-gray-600">
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Còpies de Seguretat:</strong> Ves a Configuració <i class="fa-solid fa-gear"></i> per descarregar un fitxer complet amb totes les teves dades i poder restaurar-lo en qualsevol moment.
+                                </div>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <strong class="text-gray-800">Privadesa:</strong> Tot es guarda al navegador localment.
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+            
+            <div class="p-4 border-t bg-white rounded-b-xl text-right">
+                <button onclick="app.closeHelpModal()" class="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition text-sm font-medium">
+                    Entesos!
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const apiKey = ""; // System provides key
 
         const app = {
             mode: 'teacher', // 'teacher' or 'projection'
-            data: [],
+            classes: [], // Array of {id, name, students: []}
+            currentClassId: null,
+            
+            // Computed property for current students to maintain compatibility with existing logic
+            get data() {
+                const c = this.classes.find(cls => cls.id === this.currentClassId);
+                return c ? c.students : [];
+            },
+            
+            set data(newStudents) {
+                const idx = this.classes.findIndex(cls => cls.id === this.currentClassId);
+                if (idx !== -1) {
+                    this.classes[idx].students = newStudents;
+                }
+            },
+
             settings: {
                 thresholds: {
                     as: 20,
@@ -392,59 +684,223 @@
                     ae: 60
                 }
             },
-            categories: [
-                { id: 'part', label: 'Participació', points: 2, icon: 'fa-hand-paper', color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
-                { id: 'homework', label: 'Deures Fets', points: 3, icon: 'fa-book-open', color: 'bg-purple-100 text-purple-700 hover:bg-purple-200' },
-                { id: 'opt_work', label: 'Treball Opcional', points: 5, icon: 'fa-star', color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' },
-                { id: 'excellence', label: 'Excel·lència', points: 4, icon: 'fa-medal', color: 'bg-green-100 text-green-700 hover:bg-green-200' },
-                { id: 'attitude_bad', label: 'Falta Interès', points: -2, icon: 'fa-thumbs-down', color: 'bg-red-100 text-red-700 hover:bg-red-200' }
+            categories: [], // Loaded in init
+            
+            // Available options for the UI
+            availableIcons: [
+                'fa-hand-paper', 'fa-book-open', 'fa-star', 'fa-medal', 'fa-thumbs-down', 
+                'fa-check', 'fa-comment', 'fa-pen', 'fa-calculator', 'fa-flask', 
+                'fa-map', 'fa-brain', 'fa-lightbulb', 'fa-heart', 'fa-bolt', 
+                'fa-clock', 'fa-triangle-exclamation', 'fa-eraser', 'fa-palette', 'fa-music'
             ],
+            
+            colorMap: {
+                blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200',
+                green: 'bg-green-100 text-green-700 hover:bg-green-200',
+                yellow: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
+                red: 'bg-red-100 text-red-700 hover:bg-red-200',
+                gray: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                pink: 'bg-pink-100 text-pink-700 hover:bg-pink-200'
+            },
 
             init() {
                 const now = new Date();
                 const options = { year: 'numeric', month: 'long', day: 'numeric' };
                 document.getElementById('current-date').innerText = now.toLocaleDateString('ca-ES', options);
+                
                 this.loadData();
                 this.updateLegend();
+                this.renderClassSelector();
                 this.render();
+                this.renderIconSelector();
             },
 
             loadData() {
-                const storedData = localStorage.getItem('esoScoresData');
-                if (storedData) {
-                    this.data = JSON.parse(storedData);
-                    // Migration check: Ensure existing data has short IDs if possible, or keep old ones
-                    // We won't forcefully change old IDs to avoid confusion, but new ones will be short.
+                // 1. Load Categories
+                const storedCategories = localStorage.getItem('esoCategories');
+                if (storedCategories) {
+                    this.categories = JSON.parse(storedCategories);
                 } else {
-                    this.data = [
-                        { id: 45012, name: "Maria Vila", score: 25, history: [] },
-                        { id: 89023, name: "Pau Soler", score: 42, history: [] }
+                    this.categories = [
+                        { id: 'part', label: 'Participació', points: 2, icon: 'fa-hand-paper', colorKey: 'blue', color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
+                        { id: 'homework', label: 'Deures Fets', points: 3, icon: 'fa-book-open', colorKey: 'purple', color: 'bg-purple-100 text-purple-700 hover:bg-purple-200' },
+                        { id: 'opt_work', label: 'Treball Opcional', points: 5, icon: 'fa-star', colorKey: 'yellow', color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' },
+                        { id: 'excellence', label: 'Excel·lència', points: 4, icon: 'fa-medal', colorKey: 'green', color: 'bg-green-100 text-green-700 hover:bg-green-200' },
+                        { id: 'attitude_bad', label: 'Falta Interès', points: -2, icon: 'fa-thumbs-down', colorKey: 'red', color: 'bg-red-100 text-red-700 hover:bg-red-200' }
                     ];
                 }
 
+                // 2. Load Settings
                 const storedSettings = localStorage.getItem('esoSettings');
                 if (storedSettings) {
                     this.settings = JSON.parse(storedSettings);
                 }
+
+                // 3. Load Classes & Students (Migrate if necessary)
+                const storedClasses = localStorage.getItem('esoClassesData');
+                if (storedClasses) {
+                    // New Format Exists
+                    const parsed = JSON.parse(storedClasses);
+                    this.classes = parsed.classes || [];
+                    this.currentClassId = parsed.currentClassId || (this.classes.length > 0 ? this.classes[0].id : null);
+                } else {
+                    // Check for Old Format (Single List)
+                    const oldData = localStorage.getItem('esoScoresData');
+                    
+                    if (oldData) {
+                        // Migration
+                        const students = JSON.parse(oldData);
+                        const defaultClass = {
+                            id: 'class_default',
+                            name: 'Grup Principal',
+                            students: Array.isArray(students) ? students : []
+                        };
+                        this.classes = [defaultClass];
+                        this.currentClassId = defaultClass.id;
+                        this.saveData(); // Save in new format immediately
+                    } else {
+                        // Fresh Start
+                        const defaultClass = {
+                            id: 'class_1',
+                            name: '2n ESO A',
+                            students: [
+                                { id: 45012, name: "Maria Vila", score: 25, history: [] },
+                                { id: 89023, name: "Pau Soler", score: 42, history: [] }
+                            ]
+                        };
+                        this.classes = [defaultClass];
+                        this.currentClassId = defaultClass.id;
+                    }
+                }
             },
 
             saveData() {
-                localStorage.setItem('esoScoresData', JSON.stringify(this.data));
+                const payload = {
+                    currentClassId: this.currentClassId,
+                    classes: this.classes
+                };
+                localStorage.setItem('esoClassesData', JSON.stringify(payload));
             },
             
             saveSettingsData() {
                 localStorage.setItem('esoSettings', JSON.stringify(this.settings));
             },
 
+            saveCategoriesData() {
+                localStorage.setItem('esoCategories', JSON.stringify(this.categories));
+            },
+
+            // --- Multi-Class Logic ---
+
+            renderClassSelector() {
+                const select = document.getElementById('classSelector');
+                select.innerHTML = this.classes.map(c => 
+                    `<option value="${c.id}" ${c.id === this.currentClassId ? 'selected' : ''}>${c.name}</option>`
+                ).join('');
+                
+                const currentClass = this.classes.find(c => c.id === this.currentClassId);
+                const title = currentClass ? currentClass.name : "Sense Classe";
+                document.getElementById('list-title').innerText = title;
+                document.getElementById('proj-class-title').innerText = title;
+            },
+
+            switchClass(newId) {
+                this.currentClassId = newId;
+                this.saveData();
+                this.renderClassSelector();
+                this.render();
+            },
+
+            openClassModal() {
+                const modal = document.getElementById('class-modal');
+                const content = document.getElementById('class-modal-content');
+                this.renderClassManagerList();
+                
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            },
+
+            closeClassModal() {
+                const modal = document.getElementById('class-modal');
+                const content = document.getElementById('class-modal-content');
+                content.classList.remove('scale-100', 'opacity-100');
+                content.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }, 200);
+            },
+
+            renderClassManagerList() {
+                const container = document.getElementById('class-list-container');
+                container.innerHTML = this.classes.map(c => `
+                    <div class="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200">
+                        <span class="font-medium text-sm">${c.name}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-400 bg-white px-1 rounded border">${c.students.length} alumnes</span>
+                            ${this.classes.length > 1 ? `
+                            <button onclick="app.deleteClass('${c.id}')" class="text-gray-400 hover:text-red-500 transition px-1">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            createClass(e) {
+                e.preventDefault();
+                const nameInput = document.getElementById('newClassName');
+                const name = nameInput.value.trim();
+                if(!name) return;
+
+                const newClass = {
+                    id: 'class_' + Date.now(),
+                    name: name,
+                    students: []
+                };
+                
+                this.classes.push(newClass);
+                this.currentClassId = newClass.id;
+                this.saveData();
+                
+                nameInput.value = '';
+                this.renderClassManagerList();
+                this.renderClassSelector();
+                this.render();
+                this.showToast(`Grup "${name}" creat`, 'success');
+            },
+
+            deleteClass(id) {
+                if(confirm("Segur que vols eliminar aquesta classe? Es perdran tots els alumnes d'aquest grup.")) {
+                    const idx = this.classes.findIndex(c => c.id === id);
+                    this.classes.splice(idx, 1);
+                    
+                    if (this.currentClassId === id) {
+                        this.currentClassId = this.classes.length > 0 ? this.classes[0].id : null;
+                    }
+                    
+                    this.saveData();
+                    this.renderClassManagerList();
+                    this.renderClassSelector();
+                    this.render();
+                    this.showToast('Classe eliminada', 'info');
+                }
+            },
+
             // --- ID Generator Helper ---
             generateShortId() {
-                // Generates a random 5 digit number between 10000 and 99999
                 let newId;
                 let exists = true;
+                const allStudents = this.classes.flatMap(c => c.students);
+                
                 while (exists) {
                     newId = Math.floor(10000 + Math.random() * 90000);
-                    // eslint-disable-next-line no-loop-func
-                    exists = this.data.some(s => s.id === newId);
+                    exists = allStudents.some(s => s.id === newId);
                 }
                 return newId;
             },
@@ -457,26 +913,20 @@
                 const teacherHeader = document.getElementById('teacher-header');
                 const teacherView = document.getElementById('teacher-view');
                 const teacherFooter = document.getElementById('teacher-footer');
-                
                 const projHeader = document.getElementById('projection-header');
                 const projView = document.getElementById('projection-view');
 
                 if (this.mode === 'projection') {
-                    // Switch to Projection
                     teacherHeader.classList.add('hidden');
                     teacherView.classList.add('hidden');
                     teacherFooter.classList.add('hidden');
-                    
                     projHeader.classList.remove('hidden');
                     projView.classList.remove('hidden');
-                    
                     this.renderProjection();
                 } else {
-                    // Switch to Teacher
                     teacherHeader.classList.remove('hidden');
                     teacherView.classList.remove('hidden');
                     teacherFooter.classList.remove('hidden');
-                    
                     projHeader.classList.add('hidden');
                     projView.classList.add('hidden');
                 }
@@ -485,12 +935,11 @@
             renderProjection() {
                 const grid = document.getElementById('projection-grid');
                 grid.innerHTML = '';
-
-                // Sort by ID to make it easy for students to find themselves
-                const sortedData = [...this.data].sort((a, b) => a.id - b.id);
+                const currentData = this.data; 
+                const sortedData = [...currentData].sort((a, b) => a.id - b.id);
 
                 if (sortedData.length === 0) {
-                    grid.innerHTML = '<p class="text-gray-500 text-center col-span-full">No hi ha dades per projectar.</p>';
+                    grid.innerHTML = '<p class="text-gray-500 text-center col-span-full">No hi ha dades per projectar en aquest grup.</p>';
                     return;
                 }
 
@@ -499,9 +948,6 @@
                     
                     const card = document.createElement('div');
                     card.className = `projection-card bg-gray-800 rounded-xl p-6 text-center border-2 ${level.border.replace('border-', 'border-opacity-50 border-')} shadow-lg relative overflow-hidden`;
-                    
-                    // Add subtle glow based on level
-                    const glowColor = level.color.replace('bg-', '');
                     
                     card.innerHTML = `
                         <div class="absolute top-0 left-0 w-full h-1 ${level.color}"></div>
@@ -524,13 +970,12 @@
                 const modal = document.getElementById('id-manager-modal');
                 const content = document.getElementById('id-manager-modal-content');
                 const list = document.getElementById('id-manager-list');
-
                 list.innerHTML = '';
-                
-                const sortedData = [...this.data].sort((a, b) => a.name.localeCompare(b.name));
+                const currentData = this.data;
+                const sortedData = [...currentData].sort((a, b) => a.name.localeCompare(b.name));
                 
                 if (sortedData.length === 0) {
-                    list.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-400">No hi ha alumnes.</td></tr>';
+                    list.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-400">No hi ha alumnes en aquest grup.</td></tr>';
                 } else {
                     sortedData.forEach(s => {
                         const tr = document.createElement('tr');
@@ -542,7 +987,6 @@
                         list.appendChild(tr);
                     });
                 }
-
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
                 setTimeout(() => {
@@ -563,9 +1007,9 @@
             },
 
             copyIdList() {
-                const sortedData = [...this.data].sort((a, b) => a.name.localeCompare(b.name));
+                const currentData = this.data;
+                const sortedData = [...currentData].sort((a, b) => a.name.localeCompare(b.name));
                 const text = sortedData.map(s => `${s.name}\t${s.id}`).join('\n');
-                
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
                 document.body.appendChild(textarea);
@@ -580,14 +1024,153 @@
             },
 
             regenerateAllIds() {
-                if(confirm("ATENCIÓ: Això canviarà els IDs de TOTS els alumnes. Hauràs de tornar a donar els codis nous. Segur?")) {
-                    this.data.forEach(s => {
-                        s.id = this.generateShortId();
-                    });
+                if(confirm("ATENCIÓ: Això canviarà els IDs de TOTS els alumnes d'aquest grup. Segur?")) {
+                    const newStudents = this.data.map(s => ({
+                        ...s,
+                        id: this.generateShortId()
+                    }));
+                    this.data = newStudents;
                     this.saveData();
-                    this.openIdManager(); // Refresh list
-                    this.render(); // Refresh main view
-                    this.showToast('Tots els IDs han estat regenerats', 'success');
+                    this.openIdManager();
+                    this.render();
+                    this.showToast('IDs regenerats pel grup actual', 'success');
+                }
+            },
+
+            // --- Category Manager Logic ---
+
+            renderIconSelector() {
+                const container = document.getElementById('icon-selector');
+                container.innerHTML = this.availableIcons.map(icon => `
+                    <div onclick="app.selectIcon('${icon}')" 
+                        class="icon-option cursor-pointer p-2 rounded border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 text-center transition flex items-center justify-center text-gray-600"
+                        data-icon="${icon}">
+                        <i class="fa-solid ${icon}"></i>
+                    </div>
+                `).join('');
+            },
+
+            selectIcon(icon) {
+                document.getElementById('cat-icon').value = icon;
+                document.querySelectorAll('.icon-option').forEach(el => {
+                    if (el.dataset.icon === icon) {
+                        el.classList.add('bg-indigo-100', 'border-indigo-500', 'text-indigo-700');
+                        el.classList.remove('border-gray-200', 'text-gray-600');
+                    } else {
+                        el.classList.remove('bg-indigo-100', 'border-indigo-500', 'text-indigo-700');
+                        el.classList.add('border-gray-200', 'text-gray-600');
+                    }
+                });
+            },
+
+            openCategoryModal() {
+                const modal = document.getElementById('category-modal');
+                const content = document.getElementById('category-modal-content');
+                this.renderCategoryList();
+                this.resetCategoryForm();
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            },
+
+            closeCategoryModal() {
+                const modal = document.getElementById('category-modal');
+                const content = document.getElementById('category-modal-content');
+                content.classList.remove('scale-100', 'opacity-100');
+                content.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    this.render();
+                }, 200);
+            },
+
+            renderCategoryList() {
+                const list = document.getElementById('category-list');
+                list.innerHTML = this.categories.map((cat, idx) => `
+                    <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm ${cat.color}">
+                                <i class="fa-solid ${cat.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-sm text-gray-800">${cat.label}</p>
+                                <p class="text-xs text-gray-500 font-mono">${cat.points > 0 ? '+' : ''}${cat.points} pts</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="app.editCategory(${idx})" class="p-1.5 text-gray-400 hover:text-indigo-600 transition rounded hover:bg-gray-100" title="Editar">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button onclick="app.deleteCategory(${idx})" class="p-1.5 text-gray-400 hover:text-red-600 transition rounded hover:bg-gray-100" title="Eliminar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            resetCategoryForm() {
+                document.getElementById('cat-form-title').innerText = "Afegir Nou Ítem";
+                document.getElementById('cat-id').value = "";
+                document.getElementById('cat-label').value = "";
+                document.getElementById('cat-points').value = "";
+                document.getElementById('cat-color').value = "blue";
+                this.selectIcon(this.availableIcons[0]);
+            },
+
+            editCategory(index) {
+                const cat = this.categories[index];
+                document.getElementById('cat-form-title').innerText = "Editar Ítem";
+                document.getElementById('cat-id').value = index;
+                document.getElementById('cat-label').value = cat.label;
+                document.getElementById('cat-points').value = cat.points;
+                document.getElementById('cat-color').value = cat.colorKey || 'blue';
+                this.selectIcon(cat.icon);
+            },
+
+            saveCategory(e) {
+                e.preventDefault();
+                const index = document.getElementById('cat-id').value;
+                const label = document.getElementById('cat-label').value.trim();
+                const points = parseInt(document.getElementById('cat-points').value);
+                const icon = document.getElementById('cat-icon').value;
+                const colorKey = document.getElementById('cat-color').value;
+                const colorClass = this.colorMap[colorKey];
+
+                if (!label || isNaN(points)) return;
+
+                const newCategory = {
+                    id: index !== "" ? this.categories[index].id : 'cat_' + Date.now(),
+                    label,
+                    points,
+                    icon,
+                    colorKey,
+                    color: colorClass
+                };
+
+                if (index !== "") {
+                    this.categories[index] = newCategory;
+                    this.showToast("Ítem actualitzat", "success");
+                } else {
+                    this.categories.push(newCategory);
+                    this.showToast("Ítem creat", "success");
+                }
+
+                this.saveCategoriesData();
+                this.renderCategoryList();
+                this.resetCategoryForm();
+            },
+
+            deleteCategory(index) {
+                if (confirm("Segur que vols eliminar aquest ítem?")) {
+                    this.categories.splice(index, 1);
+                    this.saveCategoriesData();
+                    this.renderCategoryList();
+                    this.showToast("Ítem eliminat", "info");
                 }
             },
 
@@ -596,11 +1179,9 @@
             openSettingsModal() {
                 const modal = document.getElementById('settings-modal');
                 const content = document.getElementById('settings-modal-content');
-                
                 document.getElementById('setting-as').value = this.settings.thresholds.as;
                 document.getElementById('setting-an').value = this.settings.thresholds.an;
                 document.getElementById('setting-ae').value = this.settings.thresholds.ae;
-
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
                 setTimeout(() => {
@@ -640,14 +1221,56 @@
 
             updateLegend() {
                 const { as, an, ae } = this.settings.thresholds;
-                
                 document.getElementById('range-na').innerText = `< ${as} punts`;
                 document.getElementById('range-as').innerText = `${as} - ${an - 1} punts`;
                 document.getElementById('range-an').innerText = `${an} - ${ae - 1} punts`;
                 document.getElementById('range-ae').innerText = `${ae}+ punts`;
             },
 
-            // --- Core App Logic ---
+            // --- Backup Logic ---
+            downloadBackup() {
+                const backupData = {
+                    esoClassesData: localStorage.getItem('esoClassesData'),
+                    esoSettings: localStorage.getItem('esoSettings'),
+                    esoCategories: localStorage.getItem('esoCategories'),
+                    timestamp: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(backupData)], {type: "application/json"});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_aula_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                this.showToast("Còpia de seguretat descarregada", "success");
+            },
+
+            restoreBackup(input) {
+                const file = input.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.esoClassesData) localStorage.setItem('esoClassesData', data.esoClassesData);
+                        if (data.esoSettings) localStorage.setItem('esoSettings', data.esoSettings);
+                        if (data.esoCategories) localStorage.setItem('esoCategories', data.esoCategories);
+                        
+                        this.showToast("Dades restaurades correctament. Recarregant...", "success");
+                        setTimeout(() => location.reload(), 1500);
+                    } catch (err) {
+                        this.showToast("Error: Fitxer invàlid", "error");
+                    }
+                };
+                reader.readAsText(file);
+                input.value = ''; // Reset input
+            },
+
+            // --- Core App Logic & Gamification ---
 
             addStudent(e) {
                 e.preventDefault();
@@ -662,30 +1285,48 @@
             },
 
             addSingleStudent(name) {
-                 this.data.push({
+                 const currentStudents = this.data;
+                 currentStudents.push({
                     id: this.generateShortId(), 
                     name: name,
                     score: 0,
+                    isAbsent: false,
                     history: []
                 });
+                this.data = currentStudents;
                 this.saveData();
                 this.render();
             },
 
             deleteStudent(id) {
                 if(confirm("Estàs segur que vols eliminar aquest alumne?")) {
-                    this.data = this.data.filter(s => s.id !== id);
+                    const currentStudents = this.data;
+                    const newStudents = currentStudents.filter(s => s.id !== id);
+                    this.data = newStudents;
                     this.saveData();
                     this.render();
                     this.showToast('Alumne eliminat', 'info');
                 }
             },
 
+            toggleAttendance(id) {
+                const currentStudents = this.data;
+                const student = currentStudents.find(s => s.id === id);
+                if (student) {
+                    student.isAbsent = !student.isAbsent;
+                    this.saveData();
+                    this.render();
+                    const status = student.isAbsent ? "Absent" : "Present";
+                    this.showToast(`${student.name} marcat com ${status}`, "info");
+                }
+            },
+
             updateScore(id, categoryIndex) {
-                const student = this.data.find(s => s.id === id);
+                const currentStudents = this.data;
+                const student = currentStudents.find(s => s.id === id);
                 const category = this.categories[categoryIndex];
                 
-                if (student) {
+                if (student && !student.isAbsent) {
                     student.score += category.points;
                     student.history.unshift({
                         cat: category.label,
@@ -703,10 +1344,10 @@
             getCompetencyLevel(score) {
                 const { as, an, ae } = this.settings.thresholds;
 
-                if (score >= ae) return { label: 'AE', full: 'Assoliment Excel·lent', color: 'bg-green-500', text: 'text-green-600', border: 'border-green-200', bg: 'bg-green-50' };
-                if (score >= an) return { label: 'AN', full: 'Assoliment Notable', color: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-200', bg: 'bg-blue-50' };
-                if (score >= as) return { label: 'AS', full: 'Assoliment Satisfactori', color: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-200', bg: 'bg-orange-50' };
-                return { label: 'NA', full: 'No Assolit', color: 'bg-red-500', text: 'text-red-600', border: 'border-red-200', bg: 'bg-red-50' };
+                if (score >= ae) return { label: 'AE', rank: 'Mestre', full: 'Assoliment Excel·lent', color: 'bg-green-500', text: 'text-green-600', border: 'border-green-200', bg: 'bg-green-50' };
+                if (score >= an) return { label: 'AN', rank: 'Expert', full: 'Assoliment Notable', color: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-200', bg: 'bg-blue-50' };
+                if (score >= as) return { label: 'AS', rank: 'Aprenent', full: 'Assoliment Satisfactori', color: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-200', bg: 'bg-orange-50' };
+                return { label: 'NA', rank: 'Novell', full: 'No Assolit', color: 'bg-red-500', text: 'text-red-600', border: 'border-red-200', bg: 'bg-red-50' };
             },
 
             // --- Bulk Import Features ---
@@ -714,11 +1355,12 @@
             openImportModal() {
                 const modal = document.getElementById('import-modal');
                 const content = document.getElementById('import-modal-content');
+                const className = this.classes.find(c => c.id === this.currentClassId)?.name || 'la classe';
+                document.getElementById('import-class-name').innerText = className;
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
                 document.getElementById('importTextarea').value = '';
                 document.getElementById('importTextarea').focus();
-                
                 setTimeout(() => {
                     content.classList.remove('scale-95', 'opacity-0');
                     content.classList.add('scale-100', 'opacity-100');
@@ -730,7 +1372,6 @@
                 const content = document.getElementById('import-modal-content');
                 content.classList.remove('scale-100', 'opacity-100');
                 content.classList.add('scale-95', 'opacity-0');
-                
                 setTimeout(() => {
                     modal.classList.add('hidden');
                     modal.classList.remove('flex');
@@ -750,6 +1391,29 @@
                 });
                 this.closeImportModal();
                 this.showToast(`${names.length} alumnes importats correctament`, 'success');
+            },
+
+            // --- Help Features ---
+            openHelpModal() {
+                const modal = document.getElementById('help-modal');
+                const content = document.getElementById('help-modal-content');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            },
+
+            closeHelpModal() {
+                const modal = document.getElementById('help-modal');
+                const content = document.getElementById('help-modal-content');
+                content.classList.remove('scale-100', 'opacity-100');
+                content.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }, 200);
             },
 
             // --- AI Features ---
@@ -781,7 +1445,6 @@
                 document.getElementById('ai-result').innerHTML = '';
                 document.getElementById('ai-loading').classList.remove('hidden');
                 document.getElementById('ai-loading').classList.add('flex');
-                
                 setTimeout(() => {
                     document.getElementById('ai-modal-content').classList.remove('scale-95', 'opacity-0');
                     document.getElementById('ai-modal-content').classList.add('scale-100', 'opacity-100');
@@ -791,7 +1454,6 @@
             closeAiModal() {
                 document.getElementById('ai-modal-content').classList.remove('scale-100', 'opacity-100');
                 document.getElementById('ai-modal-content').classList.add('scale-95', 'opacity-0');
-                
                 setTimeout(() => {
                     document.getElementById('ai-modal').classList.add('hidden');
                     document.getElementById('ai-modal').classList.remove('flex');
@@ -799,7 +1461,8 @@
             },
 
             async generateStudentReport(id) {
-                const student = this.data.find(s => s.id === id);
+                const currentStudents = this.data;
+                const student = currentStudents.find(s => s.id === id);
                 if (!student) return;
 
                 const level = this.getCompetencyLevel(student.score);
@@ -808,7 +1471,7 @@
                 this.openAiModal(`Informe: ${student.name}`);
 
                 const prompt = `
-                    Actua com un tutor de 2n d'ESO. Escriu un breu comentari d'avaluació qualitativa (màxim 3-4 frases) en català per a l'alumne: ${student.name}.
+                    Actua com un tutor. Escriu un breu comentari d'avaluació qualitativa (màxim 3-4 frases) en català per a l'alumne: ${student.name}.
                     Dades:
                     - Puntuació Total: ${student.score}
                     - Nivell Competencial: ${level.full}
@@ -821,24 +1484,25 @@
                 `;
 
                 const text = await this.callGeminiAPI(prompt);
-                
                 document.getElementById('ai-loading').classList.add('hidden');
                 document.getElementById('ai-loading').classList.remove('flex');
                 document.getElementById('ai-result').innerHTML = marked.parse(text);
             },
 
             async generateClassAnalysis() {
-                if (this.data.length === 0) {
-                    this.showToast('No hi ha alumnes per analitzar', 'error');
+                const currentStudents = this.data;
+                if (currentStudents.length === 0) {
+                    this.showToast('No hi ha alumnes per analitzar en aquest grup', 'error');
                     return;
                 }
 
-                this.openAiModal('Anàlisi Global de la Classe');
+                const currentClassName = this.classes.find(c => c.id === this.currentClassId).name;
+                this.openAiModal(`Anàlisi: ${currentClassName}`);
 
                 // Gather stats
                 let na = 0, as = 0, an = 0, ae = 0;
                 let totalPoints = 0;
-                this.data.forEach(s => {
+                currentStudents.forEach(s => {
                     totalPoints += s.score;
                     const l = this.getCompetencyLevel(s.score).label;
                     if (l === 'NA') na++;
@@ -846,13 +1510,13 @@
                     if (l === 'AN') an++;
                     if (l === 'AE') ae++;
                 });
-                const avg = (totalPoints / this.data.length).toFixed(1);
+                const avg = (totalPoints / currentStudents.length).toFixed(1);
 
                 const prompt = `
-                    Analitza les següents estadístiques de la meva classe de 2n d'ESO i dona'm 3 consells pedagògics estratègics per al proper trimestre. Respon en Català.
+                    Analitza les següents estadístiques de la meva classe "${currentClassName}" i dona'm 3 consells pedagògics estratègics per al proper trimestre. Respon en Català.
                     
                     Estadístiques:
-                    - Total alumnes: ${this.data.length}
+                    - Total alumnes: ${currentStudents.length}
                     - Mitjana de punts: ${avg}
                     - Alumnes en NA (No Assolit): ${na}
                     - Alumnes en AS (Satisfactori): ${as}
@@ -860,13 +1524,12 @@
                     - Alumnes en AE (Excel·lent): ${ae}
 
                     Format de resposta:
-                    1. Breu anàlisi de la situació (1 frase).
+                    1. Breu anàlisi de la situació del grup (1 frase).
                     2. Llista de 3 punts amb suggeriments concrets per al professor.
                     Utilitza format Markdown (negretes, llistes).
                 `;
 
                 const text = await this.callGeminiAPI(prompt);
-                
                 document.getElementById('ai-loading').classList.add('hidden');
                 document.getElementById('ai-loading').classList.remove('flex');
                 document.getElementById('ai-result').innerHTML = marked.parse(text);
@@ -895,25 +1558,28 @@
             },
 
             resetData() {
-                if(confirm("Això esborrarà TOTS els alumnes i puntuacions. Estàs segur?")) {
-                    localStorage.removeItem('esoScoresData');
-                    this.data = [];
+                if(confirm("Això esborrarà TOTS els alumnes i puntuacions del grup actual. Estàs segur?")) {
+                    this.data = []; // Clear current students
+                    this.saveData();
                     this.render();
-                    this.showToast('Dades reiniciades', 'error');
+                    this.showToast('Dades del grup reiniciades', 'error');
                 }
             },
 
             exportToCSV() {
+                const currentStudents = this.data;
+                const currentClassName = this.classes.find(c => c.id === this.currentClassId).name;
                 let csvContent = "data:text/csv;charset=utf-8,";
-                csvContent += "ID,Nom,Punts,Nivell Competencial\n";
-                this.data.forEach(s => {
-                    const level = this.getCompetencyLevel(s.score).full;
-                    csvContent += `${s.id},"${s.name}",${s.score},"${level}"\n`;
+                csvContent += "ID,Nom,Punts,Rang,Nivell Competencial,Assistència\n";
+                currentStudents.forEach(s => {
+                    const level = this.getCompetencyLevel(s.score);
+                    const attendance = s.isAbsent ? "Absent" : "Present";
+                    csvContent += `${s.id},"${s.name}",${s.score},"${level.rank}","${level.full}","${attendance}"\n`;
                 });
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
                 link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "puntuacions_2n_eso.csv");
+                link.setAttribute("download", `puntuacions_${currentClassName.replace(/\s+/g, '_')}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -939,10 +1605,12 @@
                 const grid = document.getElementById('students-grid');
                 const countEl = document.getElementById('student-count');
                 const emptyState = document.getElementById('empty-state');
-                
                 grid.innerHTML = '';
                 
-                const filteredData = this.data
+                // Use getter for current data
+                const currentStudents = this.data;
+                
+                const filteredData = currentStudents
                     .filter(s => s.name.toLowerCase().includes(filter))
                     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -960,10 +1628,12 @@
 
                 filteredData.forEach(student => {
                     const level = this.getCompetencyLevel(student.score);
+                    const isAbsent = student.isAbsent || false; // Handle legacy data
                     
                     const buttonsHtml = this.categories.map((cat, idx) => `
                         <button onclick="app.updateScore(${student.id}, ${idx})" 
-                            class="flex flex-col items-center justify-center p-2 rounded-lg transition-all transform active:scale-95 ${cat.color} border border-transparent hover:shadow-sm h-full"
+                            class="flex flex-col items-center justify-center p-2 rounded-lg transition-all transform active:scale-95 ${cat.color} border border-transparent hover:shadow-sm h-full ${isAbsent ? 'opacity-50 cursor-not-allowed' : ''}"
+                            ${isAbsent ? 'disabled' : ''}
                             title="${cat.label}">
                             <i class="fa-solid ${cat.icon} text-lg mb-1"></i>
                             <span class="text-[10px] font-semibold leading-tight text-center">${cat.label}</span>
@@ -978,20 +1648,28 @@
                     const progressPercent = Math.min(100, Math.max(0, (student.score / maxThreshold) * 100));
 
                     const card = document.createElement('div');
-                    card.className = `bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 card-enter flex flex-col md:flex-row gap-6 items-center md:items-stretch relative overflow-hidden group`;
-                    
+                    card.className = `bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 card-enter flex flex-col md:flex-row gap-6 items-center md:items-stretch relative overflow-hidden group transition-opacity ${isAbsent ? 'bg-gray-50' : ''}`;
+                    if(isAbsent) card.style.opacity = '0.8';
+
                     card.innerHTML = `
                         <!-- Student Info & Score -->
                         <div class="flex-1 w-full md:w-auto flex flex-col justify-between z-10">
                             <div class="flex justify-between items-start">
                                 <div>
                                     <div class="flex items-center gap-2">
-                                        <h3 class="text-xl font-bold text-gray-800">${student.name}</h3>
+                                        <h3 class="text-xl font-bold text-gray-800 ${isAbsent ? 'text-gray-500' : ''}">${student.name}</h3>
                                         <button onclick="app.generateStudentReport(${student.id})" 
                                             class="text-indigo-400 hover:text-indigo-600 transition p-1 rounded-full hover:bg-indigo-50" 
                                             title="Generar informe AI ✨">
                                             <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
                                         </button>
+                                        <!-- Attendance Toggle -->
+                                        <label class="inline-flex items-center cursor-pointer ml-2 relative" title="Marcar assistència">
+                                            <input type="checkbox" class="sr-only toggle-checkbox" onchange="app.toggleAttendance(${student.id})" ${isAbsent ? 'checked' : ''}>
+                                            <div class="w-8 h-4 bg-gray-200 rounded-full shadow-inner toggle-label transition-colors duration-200 ease-in-out ${isAbsent ? 'bg-red-200' : 'bg-green-200'}"></div>
+                                            <div class="dot absolute w-2 h-2 bg-white rounded-full shadow left-1 top-1 transition-transform duration-200 ease-in-out ${isAbsent ? 'translate-x-4 bg-red-500' : 'bg-green-500'}"></div>
+                                        </label>
+                                        <span class="text-xs ml-1 ${isAbsent ? 'text-red-500 font-bold' : 'text-green-500 hidden'}">Absent</span>
                                     </div>
                                     <div class="flex items-center gap-2 text-xs text-gray-400 mt-0.5" title="ID de 5 xifres per projecció">
                                         <span><i class="fa-solid fa-id-card mr-1"></i>ID: <span class="font-mono bg-gray-100 px-1 rounded select-all font-bold text-indigo-600">${student.id}</span></span>
@@ -999,16 +1677,21 @@
                                     ${lastAction}
                                 </div>
                                 <div class="text-right">
-                                    <span class="block text-3xl font-black ${level.text} score-change">${student.score}</span>
+                                    <span class="block text-3xl font-black ${level.text} score-change ${isAbsent ? 'opacity-50' : ''}">${student.score}</span>
                                     <span class="text-xs text-gray-400 uppercase tracking-wider">Punts</span>
                                 </div>
                             </div>
 
                             <div class="mt-4">
                                 <div class="flex justify-between items-end mb-1">
-                                    <span class="px-2 py-0.5 rounded text-xs font-bold ${level.bg} ${level.text} border ${level.border}">
-                                        ${level.full}
-                                    </span>
+                                    <div class="flex gap-2">
+                                        <span class="px-2 py-0.5 rounded text-xs font-bold ${level.bg} ${level.text} border ${level.border}">
+                                            ${level.full}
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded text-xs font-bold bg-gray-800 text-white border border-gray-600 shadow-sm flex items-center gap-1">
+                                            <i class="fa-solid fa-trophy text-yellow-400"></i> ${level.rank}
+                                        </span>
+                                    </div>
                                     <span class="text-xs text-gray-400">Progrés</span>
                                 </div>
                                 <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
