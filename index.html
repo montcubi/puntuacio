@@ -65,21 +65,29 @@
     <header id="teacher-header" class="bg-indigo-600 text-white shadow-lg sticky top-0 z-50 transition-transform duration-300">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-2">
             <!-- Class Selector Area -->
-            <div class="flex items-center gap-3 bg-indigo-700/50 p-1 pr-3 rounded-lg border border-indigo-500/30">
-                <div class="p-2 bg-indigo-800 rounded-md">
+            <div class="flex items-center gap-2 bg-indigo-700/50 p-1.5 pr-3 rounded-lg border border-indigo-500/30">
+                <div class="p-2 bg-indigo-800 rounded-md shadow-sm">
                     <i class="fa-solid fa-users-rectangle text-xl"></i>
                 </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <select id="classSelector" onchange="app.switchClass(this.value)" class="bg-transparent font-bold text-lg focus:outline-none cursor-pointer text-white appearance-none pr-6 relative z-10">
-                            <!-- Options filled by JS -->
-                        </select>
-                        <i class="fa-solid fa-chevron-down text-xs absolute ml-[85%] pointer-events-none text-indigo-200"></i>
+                <div class="mr-2">
+                    <div class="flex flex-col">
+                        <div class="flex items-center justify-between gap-2">
+                            <label class="text-[10px] text-indigo-300 uppercase font-bold leading-none mb-0.5">Classe Actual</label>
+                            <!-- Re-added date element -->
+                            <span id="current-date" class="text-[10px] text-indigo-300 font-mono hidden sm:inline-block"></span>
+                        </div>
+                        <div class="flex items-center relative group">
+                            <select id="classSelector" onchange="app.switchClass(this.value)" class="bg-transparent font-bold text-lg focus:outline-none cursor-pointer text-white appearance-none pr-5 relative z-10 w-32 sm:w-auto">
+                                <!-- Options filled by JS -->
+                            </select>
+                            <i class="fa-solid fa-chevron-down text-xs absolute right-0 pointer-events-none text-indigo-300 group-hover:text-white transition"></i>
+                        </div>
                     </div>
-                    <p class="text-xs text-indigo-200" id="current-date">Carregant...</p>
                 </div>
-                <button onclick="app.openClassModal()" class="ml-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-indigo-500 text-indigo-200 hover:text-white transition" title="Gestionar Classes">
-                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                <div class="h-8 w-px bg-indigo-500/50 mx-1"></div>
+                <button onclick="app.openClassModal()" class="flex flex-col items-center justify-center text-indigo-100 hover:text-white hover:bg-indigo-600/50 rounded px-2 py-1 transition" title="Afegir, canviar nom o eliminar classes">
+                    <i class="fa-solid fa-pen-to-square text-lg mb-0.5"></i>
+                    <span class="text-[10px] font-medium leading-none">Gestionar</span>
                 </button>
             </div>
 
@@ -707,7 +715,10 @@
             init() {
                 const now = new Date();
                 const options = { year: 'numeric', month: 'long', day: 'numeric' };
-                document.getElementById('current-date').innerText = now.toLocaleDateString('ca-ES', options);
+                const dateEl = document.getElementById('current-date');
+                if (dateEl) {
+                    dateEl.innerText = now.toLocaleDateString('ca-ES', options);
+                }
                 
                 this.loadData();
                 this.updateLegend();
@@ -759,6 +770,7 @@
                         this.classes = [defaultClass];
                         this.currentClassId = defaultClass.id;
                         this.saveData(); // Save in new format immediately
+                        // Optionally clear old data: localStorage.removeItem('esoScoresData');
                     } else {
                         // Fresh Start
                         const defaultClass = {
@@ -839,12 +851,17 @@
             renderClassManagerList() {
                 const container = document.getElementById('class-list-container');
                 container.innerHTML = this.classes.map(c => `
-                    <div class="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-200">
-                        <span class="font-medium text-sm">${c.name}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-gray-400 bg-white px-1 rounded border">${c.students.length} alumnes</span>
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-sm transition">
+                        <div class="flex-1">
+                            <span class="font-bold text-gray-800">${c.name}</span>
+                            <div class="text-xs text-gray-500 mt-0.5">${c.students.length} alumnes</div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="app.renameClass('${c.id}')" class="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition" title="Canviar nom">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
                             ${this.classes.length > 1 ? `
-                            <button onclick="app.deleteClass('${c.id}')" class="text-gray-400 hover:text-red-500 transition px-1">
+                            <button onclick="app.deleteClass('${c.id}')" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition" title="Eliminar classe">
                                 <i class="fa-solid fa-trash"></i>
                             </button>` : ''}
                         </div>
@@ -889,6 +906,27 @@
                     this.renderClassSelector();
                     this.render();
                     this.showToast('Classe eliminada', 'info');
+                }
+            },
+
+            renameClass(id) {
+                const cls = this.classes.find(c => c.id === id);
+                if (!cls) return;
+                
+                const newName = prompt("Nou nom per a la classe:", cls.name);
+                if (newName && newName.trim() !== "") {
+                    cls.name = newName.trim();
+                    this.saveData();
+                    this.renderClassManagerList();
+                    this.renderClassSelector();
+                    
+                    // Update header title if it's the current class
+                    if (this.currentClassId === id) {
+                        document.getElementById('list-title').innerText = cls.name;
+                        document.getElementById('proj-class-title').innerText = cls.name;
+                    }
+                    
+                    this.showToast("Nom de la classe actualitzat", "success");
                 }
             },
 
