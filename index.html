@@ -283,6 +283,12 @@
                     <input type="text" id="newClassName" placeholder="Nom nova classe..." required class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm">
                     <button type="submit" class="bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition text-sm"><i class="fa-solid fa-plus"></i></button>
                 </form>
+                <div class="mb-6">
+                    <button onclick="app.createExampleClass()" class="w-full bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Crear classe d'exemple (10 alumnes)
+                    </button>
+                    <p class="text-[11px] text-gray-400 mt-2">Afegeix una nova classe amb dades fictícies per provar l'eina. No modifica les teves classes actuals.</p>
+                </div>
                 <h4 class="text-xs font-bold text-gray-500 uppercase mb-2">Classes Existents</h4>
                 <div id="class-list-container" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
                 <div class="mt-6 flex justify-end gap-2">
@@ -571,6 +577,53 @@
                     </div>`).join('');
             },
             createClass(e) { e.preventDefault(); const name = document.getElementById('newClassName').value.trim(); if(!name) return; const newClass = { id: 'class_' + Date.now(), name: name, students: [], targetScore: 0 }; this.classes.push(newClass); this.currentClassId = newClass.id; this.saveData(); document.getElementById('newClassName').value = ''; this.renderClassManagerList(); this.renderClassSelector(); this.render(); this.showToast(`Grup "${name}" creat`, 'success'); },
+            createExampleClass() {
+                const label = "Classe d'exemple";
+                const classId = 'class_example_' + Date.now();
+                const today = new Date().toLocaleDateString('ca-ES');
+                const cats = Array.isArray(this.categories) ? this.categories : [];
+                const pickCat = (i) => cats.length ? cats[i % cats.length] : { label: "Participació", points: 2 };
+                const mkHistory = (seed) => {
+                    const h = [];
+                    // 3 recent actions, newest first (like updateScore does)
+                    for (let i = 0; i < 3; i++) {
+                        const c = pickCat(seed + i);
+                        h.unshift({ cat: c.label, pts: c.points, date: today });
+                    }
+                    return h.slice(0, 5).reverse(); // keep newest first (unshift)
+                };
+
+                const names = [
+                    "Alumne Exemple 01",
+                    "Alumne Exemple 02",
+                    "Alumne Exemple 03",
+                    "Alumne Exemple 04",
+                    "Alumne Exemple 05",
+                    "Alumne Exemple 06",
+                    "Alumne Exemple 07",
+                    "Alumne Exemple 08",
+                    "Alumne Exemple 09",
+                    "Alumne Exemple 10",
+                ];
+                const scores = [12, 18, 22, 27, 35, 41, 48, 55, 63, 72];
+
+                const students = names.map((name, i) => ({
+                    id: this.generateShortId(),
+                    name,
+                    score: scores[i] ?? 0,
+                    isAbsent: i === 2, // one absent example
+                    history: mkHistory(i),
+                }));
+
+                const newClass = { id: classId, name: label, students, targetScore: 60 };
+                this.classes.push(newClass);
+                this.currentClassId = newClass.id;
+                this.saveData();
+                this.renderClassManagerList();
+                this.renderClassSelector();
+                this.render();
+                this.showToast("Classe d'exemple creada", "success");
+            },
             deleteClass(id) { if(confirm("Segur que vols eliminar aquesta classe?")) { const idx = this.classes.findIndex(c => c.id === id); this.classes.splice(idx, 1); if (this.currentClassId === id) this.currentClassId = this.classes.length > 0 ? this.classes[0].id : null; this.saveData(); this.renderClassManagerList(); this.renderClassSelector(); this.render(); this.showToast('Classe eliminada', 'info'); } },
             renameClass(id) { const cls = this.classes.find(c => c.id === id); if (!cls) return; const newName = prompt("Nou nom:", cls.name); if (newName && newName.trim()) { cls.name = newName.trim(); this.saveData(); this.renderClassManagerList(); this.renderClassSelector(); this.showToast("Nom actualitzat", "success"); } },
 
