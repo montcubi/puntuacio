@@ -350,6 +350,7 @@
                     <div><h4 class="font-bold text-gray-700 mb-3 text-sm uppercase border-b pb-1">Còpies de Seguretat</h4><div class="space-y-4">
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200"><p class="text-xs text-gray-500 mb-2">Descarrega còpia de tot.</p><button onclick="app.downloadBackup()" class="w-full bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-50 px-3 py-2 rounded text-sm font-medium transition flex items-center justify-center gap-2"><i class="fa-solid fa-download"></i> Descarregar</button></div>
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200"><p class="text-xs text-gray-500 mb-2">Restaura dades.</p><label class="w-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 px-3 py-2 rounded text-sm font-medium transition flex items-center justify-center gap-2 cursor-pointer"><i class="fa-solid fa-upload"></i> Restaurar <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="app.restoreBackup(this)"></label></div>
+                        <div class="bg-red-50 p-3 rounded-lg border border-red-200"><p class="text-xs text-red-700 mb-2">Esborra totes les dades locals i torna a l'estat inicial.</p><button onclick="app.resetAppData()" class="w-full bg-white border border-red-300 text-red-700 hover:bg-red-100 px-3 py-2 rounded text-sm font-medium transition flex items-center justify-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> Reiniciar</button></div>
                     </div></div>
                 </div>
                 <div class="mt-6 flex justify-end gap-2 border-t pt-4"><button onclick="app.closeSettingsModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition text-sm font-medium">Cancel·lar</button><button onclick="app.saveSettings()" class="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition text-sm font-medium">Guardar</button></div>
@@ -492,13 +493,22 @@
                     this.currentClassId = parsed.currentClassId || (this.classes.length > 0 ? this.classes[0].id : null); 
                 } else {
                     const oldData = localStorage.getItem('esoScoresData');
-                    if (oldData) { const students = JSON.parse(oldData); const defaultClass = { id: 'class_default', name: 'Grup Principal', students: Array.isArray(students) ? students : [], targetScore: 0 }; this.classes = [defaultClass]; this.currentClassId = defaultClass.id; this.saveData(); } else { const defaultClass = { id: 'class_1', name: '2n ESO A', students: [{ id: 45012, name: "Maria Vila", score: 25, history: [] }, { id: 89023, name: "Pau Soler", score: 42, history: [] }], targetScore: 0 }; this.classes = [defaultClass]; this.currentClassId = defaultClass.id; }
+                    if (oldData) { const students = JSON.parse(oldData); const defaultClass = { id: 'class_default', name: 'Grup Principal', students: Array.isArray(students) ? students : [], targetScore: 0 }; this.classes = [defaultClass]; this.currentClassId = defaultClass.id; this.saveData(); } else { const defaultClass = { id: 'class_1', name: '2n ESO A', students: [], targetScore: 0 }; this.classes = [defaultClass]; this.currentClassId = defaultClass.id; }
                 }
             },
 
             saveData() { localStorage.setItem('esoClassesData', JSON.stringify({ currentClassId: this.currentClassId, classes: this.classes })); },
             saveSettingsData() { localStorage.setItem('esoSettings', JSON.stringify(this.settings)); },
             saveCategoriesData() { localStorage.setItem('esoCategories', JSON.stringify(this.categories)); },
+            resetAppData() {
+                const msg =
+                    "AIXO ESBORRARA TOTES LES DADES (classes, alumnes, puntuacions, ids, categories i barems) d'aquest navegador.\n\n" +
+                    "Consell: fes una copia de seguretat abans (Configuracio -> Descarregar).\n\n" +
+                    "Vols continuar?";
+                if (!confirm(msg)) return;
+                ["esoClassesData", "esoSettings", "esoCategories", "esoScoresData"].forEach(k => localStorage.removeItem(k));
+                location.reload();
+            },
 
             renderClassSelector() {
                 const select = document.getElementById('classSelector');
