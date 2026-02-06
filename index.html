@@ -361,7 +361,93 @@
     <div id="help-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full transform transition-all scale-95 opacity-0 flex flex-col max-h-[85vh]" id="help-modal-content">
             <div class="p-6 border-b border-gray-100 bg-indigo-600 text-white rounded-t-xl flex justify-between items-center"><div><h3 class="text-xl font-bold">Guia</h3></div><button onclick="app.closeHelpModal()" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button></div>
-            <div class="p-6 overflow-y-auto flex-grow bg-gray-50"><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><!-- Help content truncated for brevity but functionality preserved --></div></div>
+            <div class="p-6 overflow-y-auto flex-grow bg-gray-50">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-play text-indigo-500"></i>Primer ús (2 minuts)</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li>Tria la classe al selector de dalt.</li>
+                                <li>Afegeix alumnes (camp "Afegir alumne...") o usa <span class="font-medium">Importar</span>.</li>
+                                <li>Suma/resta punts amb els botons de cada alumne.</li>
+                                <li>Desa una còpia: <span class="font-medium">Configuració</span> <i class="fa-solid fa-gear text-[10px] text-gray-400"></i> → <span class="font-medium">Descarregar</span>.</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-users-rectangle text-indigo-500"></i>Classes</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li>Crear/renombrar/eliminar: botó del llapis al costat del selector de classe.</li>
+                                <li>Les dades es guarden per classe (alumnes, objectiu, etc.).</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-user text-indigo-500"></i>Alumnes i assistència</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li><span class="font-medium">Afegir</span>: escriu el nom i prem <span class="font-mono">+</span>.</li>
+                                <li><span class="font-medium">Importar</span>: un nom per línia (ideal per enganxar des d'un document).</li>
+                                <li><span class="font-medium">Cercar</span>: usa el camp "Cercar..." per filtrar.</li>
+                                <li><span class="font-medium">Absent</span>: el commutador marca l'alumne com absent (i bloqueja els botons de punts).</li>
+                                <li><span class="font-medium">Eliminar</span>: botó paperera (o "Eliminar alumne" en mòbil).</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-id-badge text-indigo-500"></i>IDs (per projecció)</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li>Botó <span class="font-medium">IDs</span>: mostra el llistat i permet copiar-lo.</li>
+                                <li><span class="font-medium">Regenerar</span> canvia tots els codis: fes backup abans.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-list-check text-indigo-500"></i>Ítems (botons de punts)</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li>Botó <span class="font-medium">Ítems</span>: crea, edita o elimina botons.</li>
+                                <li>Defineix <span class="font-medium">nom</span>, <span class="font-medium">punts</span> (positius o negatius), <span class="font-medium">color</span> i <span class="font-medium">icona</span>.</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-trophy text-indigo-500"></i>Objectiu del trimestre</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li>A la capçalera veuràs l'<span class="font-medium">Objectiu</span> (0 per defecte).</li>
+                                <li><span class="font-medium">+</span> suma punts a l'objectiu; la <span class="font-medium">paperera</span> el reinicia.</li>
+                                <li>Quan l'objectiu és &gt; 0, el marcador mostra <span class="font-mono">punts / objectiu</span>.</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-desktop text-indigo-500"></i>Mode projecció</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li>Botó <span class="font-medium">Projectar</span>: mostra els resultats anònims per <span class="font-medium">ID</span>.</li>
+                                <li>Útil per donar feedback sense mostrar noms a pantalla.</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-floppy-disk text-indigo-500"></i>Exportar i no perdre dades</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li><span class="font-medium">CSV</span>: exporta la classe actual per obrir a Excel/Sheets.</li>
+                                <li><span class="font-medium">Backup</span>: Configuració <i class="fa-solid fa-gear text-[10px] text-gray-400"></i> → Descarregar/Restaurar per moure dades entre ordinadors.</li>
+                                <li>Si el navegador ho permet, el backup et deixa <span class="font-medium">triar carpeta</span> (ideal: carpeta sincronitzada).</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-indigo-500"></i>Privacitat i consells</h4>
+                            <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                                <li>Les dades es guarden al navegador (localStorage). Si esborres dades del navegador, es perden.</li>
+                                <li>Fes backup regularment (per exemple, setmanal o al final de la sessió).</li>
+                                <li>Obre l'app amb un servidor local (ex: <span class="font-mono">python3 -m http.server</span>) per evitar limitacions de <span class="font-mono">file://</span>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="p-4 border-t bg-white rounded-b-xl text-right"><button onclick="app.closeHelpModal()" class="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition text-sm font-medium">Tancar</button></div>
         </div>
     </div>
