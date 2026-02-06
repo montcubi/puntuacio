@@ -511,6 +511,17 @@
                     const oldData = localStorage.getItem('esoScoresData');
                     if (oldData) { const students = JSON.parse(oldData); const defaultClass = { id: 'class_default', name: 'Grup Principal', students: Array.isArray(students) ? students : [], targetScore: 0 }; this.classes = [defaultClass]; this.currentClassId = defaultClass.id; this.saveData(); } else { const defaultClass = { id: 'class_1', name: '2n ESO A', students: [], targetScore: 0 }; this.classes = [defaultClass]; this.currentClassId = defaultClass.id; }
                 }
+
+                // Soft migrations: keep existing data, only add missing fields.
+                this.classes.forEach(c => {
+                    if (!Array.isArray(c.students)) c.students = [];
+                    c.students.forEach(s => {
+                        if (s.isAbsent === undefined) s.isAbsent = false;
+                        if (!Array.isArray(s.history)) s.history = [];
+                        if (!Array.isArray(s.actions)) s.actions = []; // stack for "undo"
+                        if (typeof s.score !== 'number') s.score = parseInt(s.score || 0, 10) || 0;
+                    });
+                });
             },
 
             saveData() { localStorage.setItem('esoClassesData', JSON.stringify({ currentClassId: this.currentClassId, classes: this.classes })); },
@@ -627,6 +638,7 @@
                     score: scores[i] ?? 0,
                     isAbsent: i === 2, // one absent example
                     history: mkHistory(i),
+                    actions: [],
                 }));
 
                 const newClass = { id: classId, name: label, students, targetScore: 60 };
@@ -826,11 +838,51 @@
 
             // --- Students ---
             addStudent(e) { e.preventDefault(); const name = document.getElementById('newStudentName').value.trim(); if(name) { this.addSingleStudent(name); document.getElementById('newStudentName').value = ''; this.showToast("Afegit", "success"); } },
-            addSingleStudent(name) { const s = this.data; s.push({ id: this.generateShortId(), name, score: 0, isAbsent: false, history: [] }); this.data = s; this.saveData(); this.render(); },
+            addSingleStudent(name) { const s = this.data; s.push({ id: this.generateShortId(), name, score: 0, isAbsent: false, history: [], actions: [] }); this.data = s; this.saveData(); this.render(); },
             processBulkImport() { const txt = document.getElementById('importTextarea').value; if(!txt.trim()) return this.closeImportModal(); txt.split('\n').map(n=>n.trim()).filter(n=>n).forEach(n=>this.addSingleStudent(n)); this.closeImportModal(); },
             deleteStudent(id) { if(confirm("Eliminar alumne?")) { this.data = this.data.filter(s => s.id !== id); this.saveData(); this.render(); this.showToast("Eliminat", "info"); } },
             toggleAttendance(id) { const s = this.data.find(x => x.id === id); if(s) { s.isAbsent = !s.isAbsent; this.saveData(); this.render(); } },
-            updateScore(id, idx) { const s = this.data.find(x => x.id === id); if(s && !s.isAbsent) { const cat = this.categories[idx]; s.score += cat.points; s.history.unshift({ cat: cat.label, pts: cat.points, date: new Date().toLocaleDateString() }); if(s.history.length > 5) s.history.pop(); this.saveData(); this.render(); this.showToast(`${cat.points>0?'+':''}${cat.points} pts`, cat.points>0?'success':'warning'); } },
+            updateScore(id, idx) {
+                const s = this.data.find(x => x.id === id);
+                if (s && !s.isAbsent) {
+                    const cat = this.categories[idx];
+                    const pts = cat.points;
+                    s.score += pts;
+                    s.history.unshift({ cat: cat.label, pts: pts, date: new Date().toLocaleDateString() });
+                    if (s.history.length > 5) s.history.pop();
+
+                    if (!Array.isArray(s.actions)) s.actions = [];
+                    s.actions.push({ t: 'score', pts: pts, cat: cat.label, at: Date.now() });
+                    if (s.actions.length > 50) s.actions = s.actions.slice(-50);
+
+                    this.saveData();
+                    this.render();
+                    this.showToast(`${pts > 0 ? '+' : ''}${pts} pts`, pts > 0 ? 'success' : 'warning');
+                }
+            },
+            undoLastAction(id) {
+                const s = this.data.find(x => x.id === id);
+                if (!s) return;
+                if (!Array.isArray(s.actions) || s.actions.length === 0) return this.showToast("Res a desfer", "info");
+
+                const a = s.actions.pop();
+                if (!a || a.t !== 'score' || typeof a.pts !== 'number') {
+                    this.saveData();
+                    this.render();
+                    return this.showToast("Res a desfer", "info");
+                }
+
+                s.score -= a.pts;
+                // Remove the most recent matching history entry if present.
+                if (Array.isArray(s.history) && s.history.length) {
+                    const idx = s.history.findIndex(h => h && h.cat === a.cat && h.pts === a.pts);
+                    if (idx !== -1) s.history.splice(idx, 1);
+                }
+
+                this.saveData();
+                this.render();
+                this.showToast(`Desfet ${a.pts > 0 ? '+' : ''}${a.pts} pts`, "info");
+            },
             getCompetencyLevel(s) { const t = this.settings.thresholds; if(s >= t.ae) return { label: 'AE', rank: 'Mestre', full: 'Excel·lent', color: 'bg-green-500', text: 'text-green-600', border: 'border-green-200', bg: 'bg-green-50' }; if(s >= t.an) return { label: 'AN', rank: 'Expert', full: 'Notable', color: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-200', bg: 'bg-blue-50' }; if(s >= t.as) return { label: 'AS', rank: 'Aprenent', full: 'Satisfactori', color: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-200', bg: 'bg-orange-50' }; return { label: 'NA', rank: 'Novell', full: 'No Assolit', color: 'bg-red-500', text: 'text-red-600', border: 'border-red-200', bg: 'bg-red-50' }; },
             filterStudents() { const q = (document.getElementById('searchInput')?.value || '').toLowerCase(); this.render(q); },
 
@@ -855,6 +907,7 @@
                     const l = this.getCompetencyLevel(s.score);
                     const safeStudentName = this._escapeHtml(s.name);
                     const attendanceTitle = this._escapeAttr(s.isAbsent ? 'Marcar com present (activa els botons de punts)' : 'Marcar com absent (desactiva els botons de punts)');
+                    const canUndo = Array.isArray(s.actions) && s.actions.length > 0;
                     const btns = this.categories.map((c, i) => `<button onclick="app.updateScore(${s.id}, ${i})" class="flex flex-col items-center justify-center p-1 sm:p-1.5 rounded-lg transition active:scale-95 ${c.color} border border-transparent hover:shadow-sm ${s.isAbsent ? 'opacity-50 cursor-not-allowed' : ''}" ${s.isAbsent ? 'disabled' : ''}><i class="fa-solid ${c.icon} text-sm mb-0.5"></i><span class="text-[9px] leading-none text-center">${this._escapeHtml(c.label)}</span><span class="text-[10px] font-bold mt-0.5">${c.points>0?'+':''}${c.points}</span></button>`).join('');
                     const card = document.createElement('div');
                     card.className = `bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 card-enter flex flex-col md:flex-row gap-2 md:gap-4 items-center md:items-stretch relative overflow-hidden group ${s.isAbsent ? 'bg-gray-50 opacity-80' : ''}`;
@@ -878,7 +931,15 @@
                                     <label class="inline-flex items-center cursor-pointer ml-1 relative" title="${attendanceTitle}"><input type="checkbox" class="sr-only toggle-checkbox" onchange="app.toggleAttendance(${s.id})" ${s.isAbsent?'checked':''}><div class="w-6 h-3 bg-gray-200 rounded-full toggle-label transition-colors ${s.isAbsent?'bg-red-200':'bg-green-200'}"></div><div class="dot absolute w-1.5 h-1.5 bg-white rounded-full shadow left-0.5 top-0.5 transition-transform ${s.isAbsent?'translate-x-3 bg-red-500':'bg-green-500'}"></div></label></div>
                                     <div class="text-[10px] text-gray-400 font-mono mt-0.5">ID: ${this._escapeHtml(s.id)}</div>
                                 </div>
-                                <div class="text-right">${scoreDisplay}<span class="text-[9px] text-gray-400 uppercase tracking-wider">Punts</span></div>
+                                <div class="text-right">
+                                    <div class="flex items-start justify-end gap-1">
+                                        <div>${scoreDisplay}</div>
+                                        <button onclick="app.undoLastAction(${s.id})" class="mt-1 text-gray-300 hover:text-indigo-600 transition p-1 ${canUndo ? '' : 'opacity-30 cursor-not-allowed'}" ${canUndo ? '' : 'disabled'} title="Desfer l'últim canvi de punts">
+                                            <i class="fa-solid fa-rotate-left text-[10px]"></i>
+                                        </button>
+                                    </div>
+                                    <span class="text-[9px] text-gray-400 uppercase tracking-wider">Punts</span>
+                                </div>
                             </div>
                             <div class="mt-2"><div class="flex justify-between items-end mb-1"><div class="flex gap-1"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${l.bg} ${l.text} border ${l.border}">${l.full}</span><span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-800 text-white border border-gray-600 flex items-center gap-1"><i class="fa-solid fa-trophy text-yellow-400 text-[9px]"></i> ${l.rank}</span></div></div><div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden"><div class="${l.color} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.max(0, (s.score/maxThres)*100))}%"></div></div></div>
                         </div>
