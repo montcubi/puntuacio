@@ -464,6 +464,16 @@
             mode: 'teacher',
             classes: [],
             currentClassId: null,
+            _escapeHtml(v) {
+                const s = (v ?? '').toString();
+                return s
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            },
+            _escapeAttr(v) { return this._escapeHtml(v); },
             get data() { const c = this.classes.find(cls => cls.id === this.currentClassId); return c ? c.students : []; },
             set data(newStudents) { const idx = this.classes.findIndex(cls => cls.id === this.currentClassId); if (idx !== -1) this.classes[idx].students = newStudents; },
             get currentTarget() { const c = this.classes.find(cls => cls.id === this.currentClassId); return c ? (c.targetScore || 0) : 0; },
@@ -518,7 +528,11 @@
 
             renderClassSelector() {
                 const select = document.getElementById('classSelector');
-                select.innerHTML = this.classes.map(c => `<option value="${c.id}" ${c.id === this.currentClassId ? 'selected' : ''}>${c.name}</option>`).join('');
+                select.innerHTML = this.classes.map(c => {
+                    const id = this._escapeAttr(c.id);
+                    const name = this._escapeHtml(c.name);
+                    return `<option value="${id}" ${c.id === this.currentClassId ? 'selected' : ''}>${name}</option>`;
+                }).join('');
                 const currentClass = this.classes.find(c => c.id === this.currentClassId);
                 const title = currentClass ? currentClass.name : "Sense Classe";
                 document.getElementById('list-title').innerText = title;
@@ -569,10 +583,10 @@
             renderClassManagerList() {
                 document.getElementById('class-list-container').innerHTML = this.classes.map(c => `
                     <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-sm transition">
-                        <div class="flex-1"><span class="font-bold text-gray-800">${c.name}</span><div class="text-xs text-gray-500 mt-0.5">${c.students.length} alumnes</div></div>
+                        <div class="flex-1"><span class="font-bold text-gray-800">${this._escapeHtml(c.name)}</span><div class="text-xs text-gray-500 mt-0.5">${c.students.length} alumnes</div></div>
                         <div class="flex items-center gap-1">
-                            <button onclick="app.renameClass('${c.id}')" class="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition" title="Canviar nom de la classe"><i class="fa-solid fa-pen"></i></button>
-                            ${this.classes.length > 1 ? `<button onclick="app.deleteClass('${c.id}')" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition" title="Eliminar classe (esborra tots els alumnes i puntuacions d'aquest grup)"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            <button data-class-id="${this._escapeAttr(c.id)}" onclick="app.renameClass(this.dataset.classId)" class="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition" title="Canviar nom de la classe"><i class="fa-solid fa-pen"></i></button>
+                            ${this.classes.length > 1 ? `<button data-class-id="${this._escapeAttr(c.id)}" onclick="app.deleteClass(this.dataset.classId)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition" title="Eliminar classe (esborra tots els alumnes i puntuacions d'aquest grup)"><i class="fa-solid fa-trash"></i></button>` : ''}
                         </div>
                     </div>`).join('');
             },
@@ -631,7 +645,7 @@
             _renderIdList() {
                 const list = document.getElementById('id-manager-list');
                 const sorted = [...this.data].sort((a, b) => a.name.localeCompare(b.name));
-                list.innerHTML = sorted.length ? sorted.map(s => `<tr class="hover:bg-gray-50 bg-white"><td class="px-4 py-3 font-medium text-gray-800">${s.name}</td><td class="px-4 py-3 text-right font-mono font-bold text-indigo-600 tracking-wider">${s.id}</td></tr>`).join('') : '<tr><td colspan="2" class="p-4 text-center text-gray-400">No hi ha alumnes.</td></tr>';
+                list.innerHTML = sorted.length ? sorted.map(s => `<tr class="hover:bg-gray-50 bg-white"><td class="px-4 py-3 font-medium text-gray-800">${this._escapeHtml(s.name)}</td><td class="px-4 py-3 text-right font-mono font-bold text-indigo-600 tracking-wider">${this._escapeHtml(s.id)}</td></tr>`).join('') : '<tr><td colspan="2" class="p-4 text-center text-gray-400">No hi ha alumnes.</td></tr>';
             },
             copyIdList() { const text = [...this.data].sort((a, b) => a.name.localeCompare(b.name)).map(s => `${s.name}\t${s.id}`).join('\n'); navigator.clipboard.writeText(text).then(() => this.showToast('Llista copiada', 'success')); },
             regenerateAllIds() { if(confirm("ATENCIÓ: Canviaràs tots els IDs.")) { this.data = this.data.map(s => ({ ...s, id: this.generateShortId() })); this.saveData(); this._renderIdList(); this.render(); this.showToast('IDs regenerats', 'success'); } },
@@ -640,7 +654,7 @@
             // --- Categories ---
             renderIconSelector() { document.getElementById('icon-selector').innerHTML = this.availableIcons.map(icon => `<div onclick="app.selectIcon('${icon}')" class="icon-option cursor-pointer p-2 rounded border border-gray-200 hover:bg-indigo-50 text-center text-gray-600" data-icon="${icon}"><i class="fa-solid ${icon}"></i></div>`).join(''); },
             selectIcon(icon) { document.getElementById('cat-icon').value = icon; document.querySelectorAll('.icon-option').forEach(el => { el.dataset.icon === icon ? el.classList.add('bg-indigo-100', 'border-indigo-500', 'text-indigo-700') : el.classList.remove('bg-indigo-100', 'border-indigo-500', 'text-indigo-700'); }); },
-            renderCategoryList() { document.getElementById('category-list').innerHTML = this.categories.map((cat, idx) => `<div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full flex items-center justify-center text-sm ${cat.color}" title="Icona i color de l'ítem"><i class="fa-solid ${cat.icon}"></i></div><div><p class="font-bold text-sm text-gray-800">${cat.label}</p><p class="text-xs text-gray-500 font-mono">${cat.points > 0 ? '+' : ''}${cat.points} pts</p></div></div><div class="flex gap-1"><button onclick="app.editCategory(${idx})" class="p-1.5 text-gray-400 hover:text-indigo-600" title="Editar ítem"><i class="fa-solid fa-pen"></i></button><button onclick="app.deleteCategory(${idx})" class="p-1.5 text-gray-400 hover:text-red-600" title="Eliminar ítem"><i class="fa-solid fa-trash"></i></button></div></div>`).join(''); },
+            renderCategoryList() { document.getElementById('category-list').innerHTML = this.categories.map((cat, idx) => `<div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full flex items-center justify-center text-sm ${cat.color}" title="Icona i color de l'ítem"><i class="fa-solid ${cat.icon}"></i></div><div><p class="font-bold text-sm text-gray-800">${this._escapeHtml(cat.label)}</p><p class="text-xs text-gray-500 font-mono">${cat.points > 0 ? '+' : ''}${cat.points} pts</p></div></div><div class="flex gap-1"><button onclick="app.editCategory(${idx})" class="p-1.5 text-gray-400 hover:text-indigo-600" title="Editar ítem"><i class="fa-solid fa-pen"></i></button><button onclick="app.deleteCategory(${idx})" class="p-1.5 text-gray-400 hover:text-red-600" title="Eliminar ítem"><i class="fa-solid fa-trash"></i></button></div></div>`).join(''); },
             resetCategoryForm() { document.getElementById('cat-form-title').innerText = "Afegir Nou"; document.getElementById('cat-id').value = ""; document.getElementById('cat-label').value = ""; document.getElementById('cat-points').value = ""; this.selectIcon(this.availableIcons[0]); },
             editCategory(idx) { const cat = this.categories[idx]; document.getElementById('cat-form-title').innerText = "Editar"; document.getElementById('cat-id').value = idx; document.getElementById('cat-label').value = cat.label; document.getElementById('cat-points').value = cat.points; document.getElementById('cat-color').value = cat.colorKey; this.selectIcon(cat.icon); },
             saveCategory(e) { e.preventDefault(); const idx = document.getElementById('cat-id').value; const cat = { id: idx !== "" ? this.categories[idx].id : 'cat_'+Date.now(), label: document.getElementById('cat-label').value, points: parseInt(document.getElementById('cat-points').value), icon: document.getElementById('cat-icon').value, colorKey: document.getElementById('cat-color').value, color: this.colorMap[document.getElementById('cat-color').value] }; if(idx !== "") this.categories[idx] = cat; else this.categories.push(cat); this.saveCategoriesData(); this.renderCategoryList(); this.resetCategoryForm(); this.showToast("Ítem guardat", "success"); },
@@ -739,7 +753,9 @@
                 if (!currentClass) return this.showToast("Sense classe", "error");
 
                 const esc = (v) => {
-                    const s = (v ?? "").toString();
+                    let s = (v ?? "").toString();
+                    // Prevent CSV/Excel formula injection.
+                    if (/^\s*[=+\-@]/.test(s)) s = "'" + s;
                     // RFC 4180-style escaping; we use ';' as delimiter for better Excel compatibility in ES locales.
                     if (/[\";\r\n]/.test(s)) return `"${s.replace(/\"/g, '""')}"`;
                     return s;
@@ -837,7 +853,9 @@
 
                 filtered.forEach(s => {
                     const l = this.getCompetencyLevel(s.score);
-                    const btns = this.categories.map((c, i) => `<button onclick="app.updateScore(${s.id}, ${i})" class="flex flex-col items-center justify-center p-1 sm:p-1.5 rounded-lg transition active:scale-95 ${c.color} border border-transparent hover:shadow-sm ${s.isAbsent ? 'opacity-50 cursor-not-allowed' : ''}" ${s.isAbsent ? 'disabled' : ''}><i class="fa-solid ${c.icon} text-sm mb-0.5"></i><span class="text-[9px] leading-none text-center">${c.label}</span><span class="text-[10px] font-bold mt-0.5">${c.points>0?'+':''}${c.points}</span></button>`).join('');
+                    const safeStudentName = this._escapeHtml(s.name);
+                    const attendanceTitle = this._escapeAttr(s.isAbsent ? 'Marcar com present (activa els botons de punts)' : 'Marcar com absent (desactiva els botons de punts)');
+                    const btns = this.categories.map((c, i) => `<button onclick="app.updateScore(${s.id}, ${i})" class="flex flex-col items-center justify-center p-1 sm:p-1.5 rounded-lg transition active:scale-95 ${c.color} border border-transparent hover:shadow-sm ${s.isAbsent ? 'opacity-50 cursor-not-allowed' : ''}" ${s.isAbsent ? 'disabled' : ''}><i class="fa-solid ${c.icon} text-sm mb-0.5"></i><span class="text-[9px] leading-none text-center">${this._escapeHtml(c.label)}</span><span class="text-[10px] font-bold mt-0.5">${c.points>0?'+':''}${c.points}</span></button>`).join('');
                     const card = document.createElement('div');
                     card.className = `bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 card-enter flex flex-col md:flex-row gap-2 md:gap-4 items-center md:items-stretch relative overflow-hidden group ${s.isAbsent ? 'bg-gray-50 opacity-80' : ''}`;
                     
@@ -856,9 +874,9 @@
                         <div class="flex-1 w-full md:w-auto flex flex-col justify-between z-10">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <div class="flex items-center gap-2"><h3 class="text-base font-bold text-gray-800 ${s.isAbsent?'text-gray-500':''}">${s.name}</h3>
-                                    <label class="inline-flex items-center cursor-pointer ml-1 relative" title="${s.isAbsent ? 'Marcar com present (activa els botons de punts)' : 'Marcar com absent (desactiva els botons de punts)'}"><input type="checkbox" class="sr-only toggle-checkbox" onchange="app.toggleAttendance(${s.id})" ${s.isAbsent?'checked':''}><div class="w-6 h-3 bg-gray-200 rounded-full toggle-label transition-colors ${s.isAbsent?'bg-red-200':'bg-green-200'}"></div><div class="dot absolute w-1.5 h-1.5 bg-white rounded-full shadow left-0.5 top-0.5 transition-transform ${s.isAbsent?'translate-x-3 bg-red-500':'bg-green-500'}"></div></label></div>
-                                    <div class="text-[10px] text-gray-400 font-mono mt-0.5">ID: ${s.id}</div>
+                                    <div class="flex items-center gap-2"><h3 class="text-base font-bold text-gray-800 ${s.isAbsent?'text-gray-500':''}">${safeStudentName}</h3>
+                                    <label class="inline-flex items-center cursor-pointer ml-1 relative" title="${attendanceTitle}"><input type="checkbox" class="sr-only toggle-checkbox" onchange="app.toggleAttendance(${s.id})" ${s.isAbsent?'checked':''}><div class="w-6 h-3 bg-gray-200 rounded-full toggle-label transition-colors ${s.isAbsent?'bg-red-200':'bg-green-200'}"></div><div class="dot absolute w-1.5 h-1.5 bg-white rounded-full shadow left-0.5 top-0.5 transition-transform ${s.isAbsent?'translate-x-3 bg-red-500':'bg-green-500'}"></div></label></div>
+                                    <div class="text-[10px] text-gray-400 font-mono mt-0.5">ID: ${this._escapeHtml(s.id)}</div>
                                 </div>
                                 <div class="text-right">${scoreDisplay}<span class="text-[9px] text-gray-400 uppercase tracking-wider">Punts</span></div>
                             </div>
