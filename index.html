@@ -564,8 +564,141 @@
                 this.settings.thresholds = { as, an, ae }; this.saveSettingsData(); this.updateLegend(); this.render(); this.closeSettingsModal(); this.showToast("Configuració guardada", "success");
             },
             updateLegend() { const t = this.settings.thresholds; document.getElementById('range-na').innerText = `< ${t.as}`; document.getElementById('range-as').innerText = `${t.as}-${t.an-1}`; document.getElementById('range-an').innerText = `${t.an}-${t.ae-1}`; document.getElementById('range-ae').innerText = `${t.ae}+`; },
-            downloadBackup() { const blob = new Blob([JSON.stringify({ esoClassesData: localStorage.getItem('esoClassesData'), esoSettings: localStorage.getItem('esoSettings'), esoCategories: localStorage.getItem('esoCategories') })], {type: "application/json"}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup_aula_${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); },
-            restoreBackup(input) { const reader = new FileReader(); reader.onload = (e) => { try { const d = JSON.parse(e.target.result); if(d.esoClassesData) localStorage.setItem('esoClassesData', d.esoClassesData); if(d.esoSettings) localStorage.setItem('esoSettings', d.esoSettings); if(d.esoCategories) localStorage.setItem('esoCategories', d.esoCategories); location.reload(); } catch(err) { this.showToast("Error fitxer", "error"); } }; if(input.files[0]) reader.readAsText(input.files[0]); },
+            downloadBackup: async function () {
+                const readJson = (k, fallback) => {
+                    const raw = localStorage.getItem(k);
+                    if (!raw) return fallback;
+                    try { return JSON.parse(raw); } catch { return fallback; }
+                };
+
+                const backup = {
+                    format: "puntuacio-backup",
+                    version: 1,
+                    exportedAt: new Date().toISOString(),
+                    data: {
+                        // Store parsed objects (not JSON strings) to make backups portable and inspectable.
+                        esoClassesData: readJson("esoClassesData", []),
+                        esoSettings: readJson("esoSettings", null),
+                        esoCategories: readJson("esoCategories", []),
+                    }
+                };
+
+                const date = new Date().toISOString().split("T")[0];
+                const filename = `backup_aula_${date}.json`;
+                const jsonText = JSON.stringify(backup, null, 2);
+
+                // Best UX: let the user pick a folder (works on Chromium with secure context, e.g. localhost/https).
+                if (window.showSaveFilePicker) {
+                    try {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: filename,
+                            types: [{ description: "JSON", accept: { "application/json": [".json"] } }],
+                        });
+                        const writable = await handle.createWritable();
+                        await writable.write(jsonText);
+                        await writable.close();
+                        this.showToast("Còpia guardada", "success");
+                        return;
+                    } catch (e) {
+                        // User cancelled or browser denied; fall back to download.
+                    }
+                }
+
+                const blob = new Blob([jsonText], { type: "application/json" });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(a.href), 0);
+                this.showToast("Còpia descarregada", "success");
+            },
+            restoreBackup(input) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+
+                        // New format (v1): { format, version, data: { esoClassesData, esoSettings, esoCategories } }
+                        if (parsed && parsed.format === "puntuacio-backup" && parsed.data) {
+                            if (parsed.data.esoClassesData != null) localStorage.setItem('esoClassesData', JSON.stringify(parsed.data.esoClassesData));
+                            if (parsed.data.esoSettings != null) localStorage.setItem('esoSettings', JSON.stringify(parsed.data.esoSettings));
+                            if (parsed.data.esoCategories != null) localStorage.setItem('esoCategories', JSON.stringify(parsed.data.esoCategories));
+                            location.reload();
+                            return;
+                        }
+
+                        // Legacy format: { esoClassesData: "<json-string>", esoSettings: "<json-string>", esoCategories: "<json-string>" }
+                        if (parsed && (parsed.esoClassesData || parsed.esoSettings || parsed.esoCategories)) {
+                            if (parsed.esoClassesData) localStorage.setItem('esoClassesData', parsed.esoClassesData);
+                            if (parsed.esoSettings) localStorage.setItem('esoSettings', parsed.esoSettings);
+                            if (parsed.esoCategories) localStorage.setItem('esoCategories', parsed.esoCategories);
+                            location.reload();
+                            return;
+                        }
+
+                        this.showToast("Backup no reconegut", "error");
+                    } catch (err) {
+                        this.showToast("Error fitxer", "error");
+                    }
+                };
+                if (input.files[0]) reader.readAsText(input.files[0]);
+            },
+            exportToCSV() {
+                const currentClass = this.classes.find(c => c.id === this.currentClassId);
+                if (!currentClass) return this.showToast("Sense classe", "error");
+
+                const esc = (v) => {
+                    const s = (v ?? "").toString();
+                    // RFC 4180-style escaping; we use ';' as delimiter for better Excel compatibility in ES locales.
+                    if (/[\";\r\n]/.test(s)) return `"${s.replace(/\"/g, '""')}"`;
+                    return s;
+                };
+
+                const safeName = (name) =>
+                    (name || "classe")
+                        .toString()
+                        .trim()
+                        .replace(/[^\w\d]+/g, "_")
+                        .replace(/^_+|_+$/g, "")
+                        .slice(0, 60) || "classe";
+
+                const header = ["Classe", "ID", "Nom", "Punts", "Nivell", "Absent"];
+                const rows = [header];
+                const students = [...(currentClass.students || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+                students.forEach(s => {
+                    const level = this.getCompetencyLevel(s.score || 0).full;
+                    rows.push([currentClass.name, s.id, s.name, s.score ?? 0, level, s.isAbsent ? "SI" : "NO"]);
+                });
+
+                const csv = rows.map(r => r.map(esc).join(";")).join("\r\n");
+                const date = new Date().toISOString().split("T")[0];
+                const filename = `puntuacions_${safeName(currentClass.name)}_${date}.csv`;
+
+                try {
+                    const blob = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }); // BOM helps Excel
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 0);
+                } catch (e) {
+                    // Fallback (older browsers)
+                    const uri = "data:text/csv;charset=utf-8," + encodeURIComponent("\ufeff" + csv);
+                    const a = document.createElement("a");
+                    a.href = uri;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+
+                this.showToast("CSV descarregat", "success");
+            },
 
             // --- Target Score (NEW) ---
             updateTargetScorePrompt() {
@@ -594,6 +727,7 @@
             toggleAttendance(id) { const s = this.data.find(x => x.id === id); if(s) { s.isAbsent = !s.isAbsent; this.saveData(); this.render(); } },
             updateScore(id, idx) { const s = this.data.find(x => x.id === id); if(s && !s.isAbsent) { const cat = this.categories[idx]; s.score += cat.points; s.history.unshift({ cat: cat.label, pts: cat.points, date: new Date().toLocaleDateString() }); if(s.history.length > 5) s.history.pop(); this.saveData(); this.render(); this.showToast(`${cat.points>0?'+':''}${cat.points} pts`, cat.points>0?'success':'warning'); } },
             getCompetencyLevel(s) { const t = this.settings.thresholds; if(s >= t.ae) return { label: 'AE', rank: 'Mestre', full: 'Excel·lent', color: 'bg-green-500', text: 'text-green-600', border: 'border-green-200', bg: 'bg-green-50' }; if(s >= t.an) return { label: 'AN', rank: 'Expert', full: 'Notable', color: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-200', bg: 'bg-blue-50' }; if(s >= t.as) return { label: 'AS', rank: 'Aprenent', full: 'Satisfactori', color: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-200', bg: 'bg-orange-50' }; return { label: 'NA', rank: 'Novell', full: 'No Assolit', color: 'bg-red-500', text: 'text-red-600', border: 'border-red-200', bg: 'bg-red-50' }; },
+            filterStudents() { const q = (document.getElementById('searchInput')?.value || '').toLowerCase(); this.render(q); },
 
             // --- Render ---
             render(filter = '') {
