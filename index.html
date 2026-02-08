@@ -18,6 +18,13 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .score-change { animation: bounce 0.3s; }
         @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+        /* Chrome: <option> often inherits the <select> text color; with text-white this can render "blank" options. */
+        #classSelector option,
+        #classSelector optgroup {
+            color: #111827; /* gray-900 */
+            background-color: #ffffff;
+        }
         
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
@@ -70,11 +77,12 @@
                             <label class="text-[9px] text-indigo-300 uppercase font-bold leading-none mb-0.5">Classe Actual</label>
                             <span id="current-date" class="text-[9px] text-indigo-300 font-mono hidden sm:inline-block"></span>
                         </div>
-                        <div class="flex items-center relative group">
-                            <select id="classSelector" onchange="app.switchClass(this.value)" class="bg-transparent font-bold text-base focus:outline-none cursor-pointer text-white appearance-none pr-4 relative z-10 w-28 sm:w-auto py-0">
+                        <div class="flex items-center relative group cursor-pointer w-28 sm:w-auto" onmousedown="app.openClassSelector(event)">
+                            <select id="classSelector" onchange="app.switchClass(this.value)" class="bg-transparent font-bold text-base focus:outline-none cursor-pointer text-white appearance-none pr-5 relative z-10 w-full py-0">
                                 <!-- Options filled by JS -->
                             </select>
-                            <i class="fa-solid fa-chevron-down text-[10px] absolute right-0 pointer-events-none text-indigo-300 group-hover:text-white transition"></i>
+                            <!-- Keep the chevron visually on top of the header but under the <select> click target (Chrome). -->
+                            <i class="fa-solid fa-chevron-down text-[10px] absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none z-0 text-indigo-300 group-hover:text-white transition"></i>
                         </div>
                     </div>
                 </div>

@@ -14,6 +14,7 @@ const parseJson = (raw, fallback) => {
 
 window.app = {
             mode: 'teacher',
+            projectionOrder: null, // randomized order for projection view (ids)
             classes: [],
             currentClassId: null,
             schemaVersion: SCHEMA_VERSION,
@@ -27,7 +28,36 @@ window.app = {
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;');
             },
+            openClassSelector(e) {
+                // Make the whole "Classe Actual" selector area openable (incl. chevron/blank space) on Chrome.
+                if (this._openingClassSelector) return;
+                this._openingClassSelector = true;
+                setTimeout(() => { this._openingClassSelector = false; }, 0);
+
+                const sel = document.getElementById('classSelector');
+                if (!sel) return;
+                const hasShowPicker = (typeof sel.showPicker === 'function');
+                if (e && hasShowPicker) { e.preventDefault(); }
+
+                // Keep this within the user gesture (mousedown). Chrome supports showPicker().
+                try { sel.focus({ preventScroll: true }); } catch { sel.focus(); }
+                if (hasShowPicker) { sel.showPicker(); return; }
+                sel.click();
+            },
             _escapeAttr(v) { return this._escapeHtml(v); },
+            _shuffleInPlace(arr) {
+                // Fisher-Yates shuffle (in-place)
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            },
+            _buildProjectionOrder() {
+                const ids = this.data.map(s => s.id);
+                this._shuffleInPlace(ids);
+                this.projectionOrder = ids;
+            },
             get data() { const c = this.classes.find(cls => cls.id === this.currentClassId); return c ? c.students : []; },
             set data(newStudents) { const idx = this.classes.findIndex(cls => cls.id === this.currentClassId); if (idx !== -1) this.classes[idx].students = newStudents; },
             get currentTarget() { const c = this.classes.find(cls => cls.id === this.currentClassId); return c ? (c.targetScore || 0) : 0; },
@@ -579,14 +609,28 @@ window.app = {
             
             toggleProjectionMode() {
                 this.mode = this.mode === 'teacher' ? 'projection' : 'teacher';
-                if(this.mode === 'projection') { document.getElementById('teacher-header').classList.add('hidden'); document.getElementById('teacher-view').classList.add('hidden'); document.getElementById('teacher-footer').classList.add('hidden'); document.getElementById('projection-header').classList.remove('hidden'); document.getElementById('projection-view').classList.remove('hidden'); this.renderProjection(); }
-                else { document.getElementById('teacher-header').classList.remove('hidden'); document.getElementById('teacher-view').classList.remove('hidden'); document.getElementById('teacher-footer').classList.remove('hidden'); document.getElementById('projection-header').classList.add('hidden'); document.getElementById('projection-view').classList.add('hidden'); }
+                if(this.mode === 'projection') { this._buildProjectionOrder(); document.getElementById('teacher-header').classList.add('hidden'); document.getElementById('teacher-view').classList.add('hidden'); document.getElementById('teacher-footer').classList.add('hidden'); document.getElementById('projection-header').classList.remove('hidden'); document.getElementById('projection-view').classList.remove('hidden'); this.renderProjection(); }
+                else { this.projectionOrder = null; document.getElementById('teacher-header').classList.remove('hidden'); document.getElementById('teacher-view').classList.remove('hidden'); document.getElementById('teacher-footer').classList.remove('hidden'); document.getElementById('projection-header').classList.add('hidden'); document.getElementById('projection-view').classList.add('hidden'); }
             },
             renderProjection() {
                 const grid = document.getElementById('projection-grid'); grid.innerHTML = '';
-                const sorted = [...this.data].sort((a, b) => a.id - b.id);
-                if(!sorted.length) return grid.innerHTML = '<p class="text-gray-500 text-center col-span-full">Sense dades.</p>';
-                sorted.forEach(s => {
+                const src = [...this.data];
+                if(!src.length) return grid.innerHTML = '<p class="text-gray-500 text-center col-span-full">Sense dades.</p>';
+
+                // Keep a stable randomized order during the current projection session.
+                let ordered = [];
+                if (Array.isArray(this.projectionOrder) && this.projectionOrder.length) {
+                    const byId = new Map(src.map(s => [s.id, s]));
+                    const seen = new Set();
+                    this.projectionOrder.forEach(id => { const s = byId.get(id); if (s) { ordered.push(s); seen.add(id); } });
+                    // Add any new students not in the stored order.
+                    src.forEach(s => { if (!seen.has(s.id)) ordered.push(s); });
+                } else {
+                    ordered = src;
+                    this._shuffleInPlace(ordered);
+                }
+
+                ordered.forEach(s => {
                     const l = this.getCompetencyLevel(s.score);
                     const card = document.createElement('div');
                     card.className = `projection-card bg-gray-800 rounded-xl p-4 text-center border-2 ${l.border.replace('border-', 'border-opacity-50 border-')} shadow-lg relative overflow-hidden`;
